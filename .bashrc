@@ -7,27 +7,37 @@ fi
 
 # Git shortcuts:
 git() {
-    alias branch='git branch --show-current'
-    if [[ $1 = "incoming" ]]; then
+    # Customized Git commands:
+    commands=('incoming', 'outgoing', 'modified', 'changed', 'tag', 'graph', 'search', 'pullall', '');
+
+    alias branch='git branch --show-current';  # alias in subshell doesn't affect outside world
+    if [[ $1 = $commands[0] ]]; then
+        # Show incoming changes
         command git log ..origin/$(branch);
-    elif [[ $1 = "outgoing" ]]; then
+    elif [[ $1 = $commands[1] ]]; then
+        # Show outgoing changes
         command git log origin/$(branch)..;
-    elif [[ $1 = "modified" || "$1" = "changed" ]]; then
+    elif [[ $1 = $commands[2] || $1 = $commands[3] ]]; then
+        # Show diff with remote branch
 	command git diff --name-status main;
-    elif [[ $1 = "tag" && -z $2 ]]; then
+    elif [[ $1 = $commands[4] && -z $2 ]]; then
+        # Get tagging
         command git tag -n1;
-    elif [[ $1 = "graph" ]]; then
+    elif [[ $1 = $commands[5] ]]; then
+        # Fancy commit graph
         command git log --graph --abbrev-commit --decorate --format=format:'%C(bold blue)%h%C(reset) - %C(bold cyan)%aD
             %C(reset) %C(bold green)(%ar)%C(reset)%C(auto)%d%C(reset)%n'
             '%C(white)%s%C(reset) %C(dim white)- %an%C(reset)';
-    elif [[ $1 = "search" ]]; then
+    elif [[ $1 = $commands[6] ]]; then
+        # Search repo for term
         if [[ $2 = "" ]]; then
             echo "Error- custom search command requires a search term";
         else
             command git log -S$2 --all -p;
         fi
-    elif [[ $1 = "pullall" ]]; then
-        REMOTES=$(git remote | xargs -n1 echo)
+    elif [[ $1 = $commands[7] ]]; then
+        # Safely pull all branches from all remotes
+        REMOTES=$(git remote | xargs -n1 echo);
         CLB=$(git rev-parse --abbrev-ref HEAD);  # Current Local Branch
         echo "CLB: $CLB"
         echo "$REMOTES" | while read -r REMOTE; do
@@ -52,6 +62,13 @@ git() {
                     fi
                 fi
             done
+        done
+    elif [[ $1 = $commands[8] ]]; then
+        # git
+        command git
+        printf "\nCustom Commands:\n:"
+        for c in ${commands[@]}; do
+            printf "    '$c'\n"
         done
     else
         command git "$@"
