@@ -17,7 +17,9 @@ git() {
     elif [[ $1 = "tag" && -z $2 ]]; then
         command git tag -n1;
     elif [[ $1 = "graph" ]]; then
-        command git log --graph --abbrev-commit --decorate --format=format:'%C(bold blue)%h%C(reset) - %C(bold cyan)%aD%C(reset) %C(bold green)(%ar)%C(reset)%C(auto)%d%C(reset)%n''          %C(white)%s%C(reset) %C(dim white)- %an%C(reset)';
+        command git log --graph --abbrev-commit --decorate --format=format:'%C(bold blue)%h%C(reset) - %C(bold cyan)%aD
+            %C(reset) %C(bold green)(%ar)%C(reset)%C(auto)%d%C(reset)%n'
+            '%C(white)%s%C(reset) %C(dim white)- %an%C(reset)';
     elif [[ $1 = "search" ]]; then
         if [[ $2 = "" ]]; then
             echo "Error- custom search command requires a search term";
@@ -55,9 +57,6 @@ git() {
         command git "$@"
     fi;
 }
-alias gs='git status'
-alias gf='git fetch'
-alias gc='git commit'
 
 docker() {
     commands=("reset" "clean" "bash-test" "")
@@ -93,13 +92,9 @@ docker() {
         printf "Command:\n--docker '$@'--\n"
     fi;
 }
-alias iris-compose='docker compose --env-file .env -p iris-ui up --abort-on-container-exit --renew-anon-volumes --remove-orphans --force-recreate -V --build'
-alias json-test="curl --header \"Content-Type: application/json\" --request POST --data '{\"hello\":\"world\"}'"
 
 # Copied from the default `aliases.sh` created by Git Bash:
 # --show-control-chars: help showing Korean or accented characters
-alias ls='ls -aF --color=auto --show-control-chars'
-alias ll='ls -lh'
 case "$TERM" in
 xterm*)
 	# The following programs are known to require a Win32 Console
@@ -114,3 +109,8 @@ xterm*)
 	done
 	;;
 esac
+
+# Print out my customizations
+echo "$(alias)";
+git;
+docker;

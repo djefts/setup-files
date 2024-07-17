@@ -1,15 +1,25 @@
-printandexecute() {
-    { printf Executing; printf ' %q' "$@"; echo; } >&2
-    "$@"
-}
-alias() {
-    for arg; do
-        [[ "arg" == *=* ]] &&
-        arg="${arg%%=*}=printandexecute ${arg#*=}"
-        builtin alias "$arg"
+aliases() {
+    # Print out existing aliases
+    for key in "${!BASH_ALIASES[@]}"; do
+        printf '%s=%q\n' "$key" "${BASH_ALIASES[$key]}"
     done
 }
 
-alias python3.12='/c/Users/djefts/AppData/Local/Programs/Python/Python312/python'
-alias python3.11='/c/Users/djefts/AppData/Local/Programs/Python/Python311/python'
-alias python3.10='/c/Users/djefts/AppData/Local/Programs/Python/Python310/python'
+# List Directory Fancy Stuff
+alias ls='ls -aF --color=auto --show-control-chars'
+alias ll='ls -lh'
+
+# Python Version Bindings
+alias python312='/c/Program Files FF/Python/Python312/python'
+alias python311='/c/Program Files FF/Python/Python311/python'
+alias python310='/c/Program Files FF/Python/Python310/python'
+alias python38='/c/Program Files FF/Python/Python38/python'
+
+# Git Shortcuts
+alias gc='git commit'
+alias gf='git fetch'
+alias gs='git status'
+
+# Miscellaneous
+alias json-test="curl --header \"Content-Type: application/json\" --request POST --data '{\"hello\":\"world\"}'"
+

@@ -1,2 +1,10 @@
-*/microservices/api/test
-*/.run/
+# Ignore everything since this should live in root directory
+*
+
+# Unignore profile setup files
+!.bash_aliases
+!.bash_profile
+!.bashrc
+!.dir_colors
+!.gitignore
+!.vimrc
