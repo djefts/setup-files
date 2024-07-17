@@ -2,13 +2,13 @@
 	helper = manager-core
 [user]
 	name = David Jefts
-[push]
-        default = upstream
-        autoSetupRemote = true
 [core]
 	autocrlf = true
 	symlinks = true
 	ignoreCase = false
-	excludesfile = ~/.gitignore
+	excludesfile = ~/.gitignore.global
+[push]
+  default = upstream
+  autoSetupRemote = true
 [credential "helperselector"]
 	selected = manager-core

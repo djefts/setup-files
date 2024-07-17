@@ -22,4 +22,4 @@ alias gs='git status'
 
 # Miscellaneous
 alias json-test="curl --header \"Content-Type: application/json\" --request POST --data '{\"hello\":\"world\"}'"
-
+alias cd="cd -P"

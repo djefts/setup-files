@@ -8,7 +8,7 @@ fi
 # Git shortcuts:
 git() {
     # Customized Git commands:
-    commands=('incoming', 'outgoing', 'modified', 'changed', 'tag', 'graph', 'search', 'pullall', '');
+    commands=('incoming' 'outgoing' 'modified' 'changed' 'tag' 'graph' 'search' 'pullall' '')
 
     alias branch='git branch --show-current';  # alias in subshell doesn't affect outside world
     if [[ $1 = $commands[0] ]]; then
@@ -19,15 +19,13 @@ git() {
         command git log origin/$(branch)..;
     elif [[ $1 = $commands[2] || $1 = $commands[3] ]]; then
         # Show diff with remote branch
-	command git diff --name-status main;
+	      command git diff --name-status main;
     elif [[ $1 = $commands[4] && -z $2 ]]; then
         # Get tagging
         command git tag -n1;
     elif [[ $1 = $commands[5] ]]; then
         # Fancy commit graph
-        command git log --graph --abbrev-commit --decorate --format=format:'%C(bold blue)%h%C(reset) - %C(bold cyan)%aD
-            %C(reset) %C(bold green)(%ar)%C(reset)%C(auto)%d%C(reset)%n'
-            '%C(white)%s%C(reset) %C(dim white)- %an%C(reset)';
+        command git log --graph --abbrev-commit --decorate --format=format:'%C(bold blue)%h%C(reset) - %C(bold cyan)%aD%C(reset) %C(bold green)(%ar)%C(reset)%C(auto)%d%C(reset)%n%C(white)%s%C(reset) %C(dim white)- %an%C(reset)';
     elif [[ $1 = $commands[6] ]]; then
         # Search repo for term
         if [[ $2 = "" ]]; then
