@@ -1,0 +1,8 @@
+# Settings apply across all Linux distros running on WSL 2
+[wsl2]
+localhostForwarding=true
+guiApplications=true
+
+# Enable experimental features
+[experimental]
+autoMemoryReclaim=gradual

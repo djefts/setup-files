@@ -16,7 +16,7 @@ git() {
         command git log origin/"$(branch)"..;
     elif [[ $1 = "${commands[2]}" || "$1" = "${commands[3]}" ]]; then
         # Better git diff
-	    command git diff --name-status main;
+	    command git diff --name-status "$(branch)";
     elif [[ $1 = "${commands[4]}" && -n $2 ]]; then
         # Git tagging
         command git tag -n1;
