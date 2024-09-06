@@ -1,5 +1,5 @@
 # Git shortcuts:
-git() {
+git() {( set -e
     commands=("incoming" "outgoing" "modified" "changed" "tag" "graph" "search" "pullall");
     branch() {
         git branch --show-current
@@ -72,4 +72,4 @@ git() {
         printf "\nCUSTOM COMMANDS ERROR\n"
         printf "Command:\n--git '%s'--\n" "$@"
     fi;
-}
+)}

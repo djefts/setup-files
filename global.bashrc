@@ -33,4 +33,11 @@ esac
 
 # Source all of my custom commands files
 for f in ~/setup-files/bash_commands/*; do source "$f"; done
-echo "hello_world";
+
+# Create symlinks based on OS
+windows_os=("msys" "win32" "cygwin")
+if [[ $OSTYPE =~ ^($(IFS=\|; echo "${windows_os[*]}"))$ ]]; then
+    ~/setup-files/windows_setup.bat
+fi;
+
+echo "hello_david";

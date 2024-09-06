@@ -1,4 +1,6 @@
-#!/bin/sh & :: this allows Git Bash to tab-complete
-mklink /j %userprofile%\.minttyrc %userprofile%\setup-files\.minttyrc
-mklink /j %userprofile%\.vimrc %userprofile%\setup-files\.vimrc
-mklink /j %userprofile%\.wslconfig %userprofile%\setup-files\.wslconfig
+@ECHO OFF
+for %%f in (.minttyrc .vimrc .wslconfig) do (
+  if not exist %userprofile%\%%f (
+    mklink /j %userprofile%\%%f %userprofile%\setup-files\%%f
+  )
+)
