@@ -21,7 +21,7 @@ docker() {
         command docker run --rm -it --entrypoint bash ubuntu
     elif [[ "$1" = "${commands[3]}" && -n $2 ]]; then
         # docker enter [container]
-        command docker exec -it "$2" sh;
+        command docker exec -it "$2" sh
     elif [[ "$1" = "${commands[4]}" ]]; then
         # docker
         command docker
@@ -31,16 +31,16 @@ docker() {
         done
     elif [[ -z $1 ]]; then
         # Base Docker output
-        command docker;
-        printf "\nCustom Docker Commands:\n";
+        command docker
+        printf "\nCustom Docker Commands:\n"
         for c in "${commands[@]}"; do
             printf "\t'%s'\n" "$c"
-        done;
+        done
     elif [[ ! " ${commands[*]} " =~ ^$1$ ]]; then
         # docker [actual command]
         command docker "$@"
     else
         printf "\nCUSTOM COMMANDS ERROR\n"
         printf "Command:\n--docker '%s'--\n" "$@"
-    fi;
+    fi
 }

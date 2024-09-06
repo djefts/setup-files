@@ -18,17 +18,18 @@ PROMPT_COMMAND="${PROMPT_COMMAND:+$PROMPT_COMMAND$'\n'}history -a; history -c; h
 # Copied from the default `aliases.sh` created by Git Bash:
 # --show-control-chars: help showing Korean or accented characters
 case "$TERM" in xterm*)
-	# The following programs are known to require a Win32 Console
-	# for interactive usage, therefore let's launch them through winpty
-	# when run inside `mintty`.
-	for name in node ipython php php5 psql python2.7; do
-		case "$(type -p "$name".exe 2>/dev/null)" in
-		    ''|/usr/bin/*)
-		        continue;;
-		esac
-		alias $name="winpty $name.exe"
-	done
-	;;
+    # The following programs are known to require a Win32 Console
+    # for interactive usage, therefore let's launch them through winpty
+    # when run inside `mintty`.
+    for name in node ipython php php5 psql python2.7; do
+        case "$(type -p "$name".exe 2> /dev/null)" in
+            '' | /usr/bin/*)
+                continue
+                ;;
+        esac
+        alias $name="winpty $name.exe"
+    done
+    ;;
 esac
 
 # Source all of my custom commands files
@@ -36,8 +37,11 @@ for f in ~/setup-files/bash_commands/*; do source "$f"; done
 
 # Create symlinks based on OS
 windows_os=("msys" "win32" "cygwin")
-if [[ $OSTYPE =~ ^($(IFS=\|; echo "${windows_os[*]}"))$ ]]; then
+if [[ $OSTYPE =~ ^($(
+    IFS=\|
+    echo "${windows_os[*]}"
+))$ ]]; then
     ~/setup-files/windows_setup.bat
-fi;
+fi
 
-echo "hello_david";
+echo "hello_david"
