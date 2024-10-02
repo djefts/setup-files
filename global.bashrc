@@ -1,5 +1,8 @@
 # shellcheck source=~
 
+# DIRCOLORS Setup
+eval "$(dircolors -b ~/setup-files/.dir_colors)"
+
 if [ -f ~/setup-files/.bash_aliases ]; then
     . ~/setup-files/.bash_aliases
 fi
@@ -16,7 +19,6 @@ shopt -s histappend
 PROMPT_COMMAND="${PROMPT_COMMAND:+$PROMPT_COMMAND$'\n'}history -a; history -c; history -r"
 
 # Copied from the default `aliases.sh` created by Git Bash:
-# --show-control-chars: help showing Korean or accented characters
 case "$TERM" in xterm*)
     # The following programs are known to require a Win32 Console
     # for interactive usage, therefore let's launch them through winpty
@@ -35,13 +37,7 @@ esac
 # Source all of my custom commands files
 for f in ~/setup-files/bash_commands/*; do source "$f"; done
 
-# Create symlinks based on OS
-windows_os=("msys" "win32" "cygwin")
-if [[ $OSTYPE =~ ^($(
-    IFS=\|
-    echo "${windows_os[*]}"
-))$ ]]; then
-    ~/setup-files/windows_setup.bat
-fi
+# Force-Copy pre-built basic profile files to home directory
+cp -af ~/setup-files/default_files/. -t ~/
 
 echo "hello_david"

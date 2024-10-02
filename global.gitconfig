@@ -2,9 +2,38 @@
 	name = David Jefts
 [core]
 	autocrlf = true
-	symlinks = true
-	ignoreCase = false
+  editor = vim
 	excludesfile = ~/setup-files/global.gitignore
+	# tells git to ignore file permission changes
+  filemode = false
+	ignoreCase = false
+  pager = less -FRSX
+	symlinks = true
+	# check/warn for tabs used as indentation
+	whitespace = tab-in-indent
 [push]
-  default = upstream
   autoSetupRemote = true
+  default = upstream
+[rebase]
+  autosquash = true
+[rerere]
+  # The name stands for “reuse recorded resolution” and, as the name implies, it allows you to ask Git to remember how
+  #   you’ve resolved a hunk conflict so that the next time it sees the same conflict, Git can resolve it for you
+  #   automatically.
+  autoupdate = true
+  enabled = true
+[filter "lfs"]
+  clean = git-lfs clean -- %f
+  smudge = git-lfs smudge -- %f
+  process = git-lfs filter-process
+  required = true
+[color]
+  branch = auto
+  diff = auto
+  filemode = false
+  pager = true
+  status = auto
+  ui = auto
+[alias]
+  lgb = log --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset%n' --abbrev-commit --date=relative --branches
+  hist = log --pretty=format:\"%h %ad | %s%d [%an]\" --graph --date=short
