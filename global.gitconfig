@@ -1,16 +1,16 @@
 [user]
-	name = David Jefts
+  name = David Jefts
 [core]
-	autocrlf = true
+  autocrlf = true
   editor = vim
-	excludesfile = ~/setup-files/global.gitignore
-	# tells git to ignore file permission changes
+  excludesfile = ~/setup-files/global.gitignore
+  # tells git to ignore file permission changes
   filemode = false
-	ignoreCase = false
+  ignoreCase = false
   pager = less -FRSX
-	symlinks = true
-	# check/warn for tabs used as indentation
-	whitespace = tab-in-indent
+  symlinks = true
+  # check/warn for tabs used as indentation
+  whitespace = tab-in-indent
 [push]
   autoSetupRemote = true
   default = upstream
