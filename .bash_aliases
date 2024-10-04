@@ -1,7 +1,7 @@
 # List Directory Fancy Stuff
 # --show-control-chars: help showing Korean or accented characters
 alias ls='ls -aF --color=auto --show-control-chars'
-alias ll='ls -lh'
+alias ll='ls -lathr'
 
 python_store="/c/Users/David\ Jefts/AppData/Local/Programs/Python"
 # Python Version Bindings

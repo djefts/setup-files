@@ -10,6 +10,10 @@ fi
 # Make cd change terminal-path if following a symlink
 alias cd="cd -P"
 
+# Node.js Shell setup
+echo "Node fnm env setup..."
+eval "$(fnm env --use-on-cd --shell bash)"
+
 # Share Bash history between terminal windows
 #   Courtesy of https://unix.stackexchange.com/a/1292
 HISTCONTROL=ignoredups:erasedups # Avoid duplicates
@@ -38,6 +42,9 @@ esac
 for f in ~/setup-files/bash_commands/*; do source "$f"; done
 
 # Force-Copy pre-built basic profile files to home directory
-cp -af ~/setup-files/default_files/. -t ~/
+cp -a --remove-destination ~/setup-files/default_files/. -t ~/
+# add global.gitconfig configurations without overwriting `git config --global`
+# shellcheck disable=SC2088
+command git config --global include.path "~/setup-files/global.gitconfig"
 
 echo "hello_david"
