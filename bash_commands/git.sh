@@ -18,8 +18,9 @@ git() { (
     elif [[ $1 = "${commands[2]}" || "$1" = "${commands[3]}" ]]; then
         # Better git diff
         command git diff --name-status "$(branch)"
-    elif [[ $1 = "${commands[4]}" && -n $2 ]]; then
+    elif [[ $1 = "${commands[4]}" && $2 = "" ]]; then
         # Git tagging
+        echo "Custom git tag command..."
         command git tag -n1
     elif [[ $1 = "${commands[5]}" ]]; then
         # Fancy Git graph output
@@ -35,7 +36,6 @@ git() { (
         # Pull all remote branches from origin that have a local copy
         REMOTES=$(git remote | xargs -n1 echo)
         CLB=$(git rev-parse --abbrev-ref HEAD) # Current Local Branch
-        echo "CLB: $CLB"
         echo "$REMOTES" | while read -r REMOTE; do
             git fetch --all
             echo "updated $REMOTE"
@@ -44,8 +44,8 @@ git() { (
                 # awk(search) for "[local-branch] merges with remote [remote-branch]"
                 ARB="refs/remotes/$REMOTE/$RB"                             # remote branch full path name
                 ALB="refs/heads/$LB"                                       # local branch full path name
-                NBEHIND=$(($(git rev-list --count $ALB..$ARB 2> NUL) + 0)) # unpushed local commits
-                NAHEAD=$(($(git rev-list --count $ARB..$ALB 2> NUL) + 0))  # unpulled remote commits
+                NBEHIND=$(($(git rev-list --count "$ALB".."$ARB" 2> /dev/null) + 0)) # unpushed local commits
+                NAHEAD=$(($(git rev-list --count "$ARB".."$ALB" 2> /dev/null) + 0))  # unpulled remote commits
                 if [ "$NBEHIND" -gt 0 ]; then
                     if [ "$NAHEAD" -gt 0 ]; then
                         echo " diverged branch $LB is $NBEHIND commit(s) behind and $NAHEAD commit(s) ahead of $REMOTE/$RB. could not be fast-forwarded"

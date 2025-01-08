@@ -4,6 +4,9 @@ alias ls='ls -aF --color=auto --show-control-chars'
 alias ll='ls -lathr'
 
 python_store="/c/Users/David\ Jefts/AppData/Local/Programs/Python"
+if [[ $OSTYPE == "linux-gnu" ]]; then
+  python_store="/mnt$python_store"
+fi
 # Python Version Bindings
 alias python312="$python_store/Python312/python"
 alias python311="$python_store/Python311/python"
@@ -13,7 +16,7 @@ alias python38="$python_store/Python38/python"
 # Git Shortcuts
 alias gc='git commit'
 alias gf='git fetch'
-alias gs='git status'
+alias gs='git status --show-stash'
 
 # Miscellaneous
 alias cd="cd -P"

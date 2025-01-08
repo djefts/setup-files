@@ -1,7 +1,7 @@
 [user]
   name = David Jefts
 [core]
-  autocrlf = true
+  autocrlf = input
   editor = vim
   excludesfile = ~/setup-files/global.gitignore
   # tells git to ignore file permission changes
