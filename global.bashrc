@@ -66,6 +66,15 @@ echo "Setting up custom functions..."
 # Source all of my custom commands files
 for f in ~/setup-files/bash_commands/*; do source "$f"; done
 
+# Automatically hook into PROMPT_COMMAND if not already present
+if [[ $PROMPT_COMMAND != *update_terminal_title* ]]; then
+    if [[ -n "$PROMPT_COMMAND" ]]; then
+        PROMPT_COMMAND="update_terminal_title; ${PROMPT_COMMAND}"
+    else
+        PROMPT_COMMAND="update_terminal_title"
+    fi
+fi
+
 echo "Setting up bash profile..."
 # Force-Copy pre-built basic profile files to home directory
 cp -a --remove-destination ~/setup-files/default_files/. -t ~/
