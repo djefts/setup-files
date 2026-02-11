@@ -1,2 +1,2 @@
-PATH=$PATH:~/bin
+PATH=$PATH:~/bin:/home/david/.local/bin
 source ~/setup-files/global.bashrc
