@@ -70,7 +70,7 @@ if [[ ' msys cygwin win32 ' =~ .*\ $OSTYPE\ .* ]]; then
 
     fnm use
   else
-    say "FNM not installed."
+    echo "FNM not installed."
   fi
 fi
 
@@ -78,7 +78,7 @@ fi
 # ============================================================
 #  SHARED BASH HISTORY
 # ============================================================
-say "Setting up shared bash history..."
+echo "Setting up shared bash history..."
 
 # Avoid duplicates and share history across sessions
 HISTCONTROL=ignoredups:erasedups
@@ -161,10 +161,11 @@ fi
 echo "Setting up bash profile..."
 # Force-Copy pre-built basic profile files to home directory
 cp -a --remove-destination ~/setup-files/default_files/. -t ~/
-# add global.gitconfig configurations without overwriting `git config --global`
+# add global.gitconfig configurations without overwriting 'git config --global'
 command git config --global include.path "~/setup-files/global.gitconfig"
 # allow WSL to open browser
 export BROWSER='/mnt/c/Program Files/Mozilla Firefox/firefox.exe'
 
 cd ~/
 echo "hello_david"
+
