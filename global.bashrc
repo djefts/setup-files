@@ -163,5 +163,8 @@ echo "Setting up bash profile..."
 cp -a --remove-destination ~/setup-files/default_files/. -t ~/
 # add global.gitconfig configurations without overwriting `git config --global`
 command git config --global include.path "~/setup-files/global.gitconfig"
+# allow WSL to open browser
+export BROWSER='/mnt/c/Program Files/Mozilla Firefox/firefox.exe'
+
 cd ~/
 echo "hello_david"
