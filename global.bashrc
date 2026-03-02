@@ -1,6 +1,6 @@
 # shellcheck source=~
 
-# If not running interactively, don't do anything
+# If not running interactively, don't do this stuff
 case $- in
     *i*) ;;
     *) return;;
@@ -16,7 +16,7 @@ command git config --global include.path "~/setup-files/global.gitconfig"
 
 # DIRCOLORS Setup
 eval "$(dircolors -b ~/setup-files/.dir_colors)"
-case "$TERM" in xterm-color|*-256color) 
+case "$TERM" in xterm-color|*-256color)
     color_prompt=yes;;
 esac
 if [ -x /usr/bin/tput ] && tput setaf 1 >&/dev/null; then
@@ -34,7 +34,7 @@ else
 fi
 unset color_prompt
 
-# Bash Aliases
+echo "Setting up bash aliases..."
 source ~/setup-files/.bash_aliases
 
 # Make cd change terminal-path if following a symlink
@@ -44,8 +44,47 @@ alias cd="cd -P"
 #   Courtesy of https://unix.stackexchange.com/a/1292
 HISTCONTROL=ignoredups:erasedups # Avoid duplicates
 # When the shell exits, append to the history file instead of overwriting it
+
+# ============================================================
+#  NODE.JS SHELL SETUP (FNM)
+# ============================================================
+if [[ ' msys cygwin win32 ' =~ .*\ $OSTYPE\ .* ]]; then
+  echo "Setting up FNM Node environment..."
+  FNM_PATH=$(cygpath "/c/Program Files FF/.fnm/")
+
+  if [[ -d "$FNM_PATH" ]]; then
+    [[ :$PATH: != *":$FNM_PATH:"* ]] && export PATH="$FNM_PATH:$PATH"
+
+    eval "$(fnm env --shell bash --fnm-dir "$FNM_PATH" \
+      --version-file-strategy recursive \
+      --corepack-enabled \
+      --resolve-engines)"
+
+    if [[ "$OSTYPE" == "linux-gnu" ]]; then
+      export PATH="$FNM_MULTISHELL_PATH:$PATH"
+      export NODE_PATH="$FNM_MULTISHELL_PATH"
+    elif [[ ' msys cygwin win32 ' =~ .*\ $OSTYPE\ .* ]]; then
+      export PATH="$(cygpath "$FNM_MULTISHELL_PATH"):$PATH"
+      export NODE_PATH="$(cygpath "$FNM_MULTISHELL_PATH")"
+    fi
+
+    fnm use
+  else
+    say "FNM not installed."
+  fi
+fi
+
+
+# ============================================================
+#  SHARED BASH HISTORY
+# ============================================================
+say "Setting up shared bash history..."
+
+# Avoid duplicates and share history across sessions
+HISTCONTROL=ignoredups:erasedups
 shopt -s histappend
-# After each command, append to the history file and reread it
+
+# Append and reread history on every prompt
 PROMPT_COMMAND="${PROMPT_COMMAND:+$PROMPT_COMMAND$'\n'}history -a; history -c; history -r"
 
 # Automatically hook into PROMPT_COMMAND if not already present
@@ -65,21 +104,46 @@ case "$TERM" in xterm*)
   # The following programs are known to require a Win32 Console
   # for interactive usage, therefore let's launch them through winpty
   # when run inside `mintty`.
-  if [[ ' msys cygwin win32 ' =~ .\ $OSTYPE\ .* ]]; then
-    for name in node ipython php php5 psql python2.7; do
-      case "$(type -p "$name".exe 2>/dev/null)" in
-        '' | /usr/bin/*)
-          continue
-          ;;
-      esac
-      alias $name="winpty $name.exe"
-    done
-  fi
-  ;;
+
+# ============================================================
+#  WINPTY SETUP FOR GIT BASH
+# ============================================================
+case "$TERM" in
+  xterm*)
+    if [[ ' msys cygwin win32 ' =~ .\ $OSTYPE\ .* ]]; then
+      for name in node ipython php php5 psql python2.7; do
+        case "$(type -p "$name".exe 2>/dev/null)" in
+          '' | /usr/bin/*) continue ;;
+        esac
+        alias $name="winpty $name.exe"
+      done
+    fi
+    ;;
 esac
 
-# Source all of my custom commands files
-for f in ~/setup-files/bash_commands/*; do source "$f"; done
+
+# ============================================================
+#  CUSTOM COMMANDS AND FUNCTIONS
+# ============================================================
+echo "Sourcing custom bash commands..."
+for f in ~/setup-files/bash_commands/*; do
+  source "$f"
+done
+
+
+# ============================================================
+#  TERMINAL TITLE UPDATER
+# ============================================================
+# Ensure update_terminal_title is called each prompt if available
+if declare -f update_terminal_title >/dev/null; then
+  if [[ $PROMPT_COMMAND != *update_terminal_title* ]]; then
+    if [[ -n "$PROMPT_COMMAND" ]]; then
+      PROMPT_COMMAND="update_terminal_title; ${PROMPT_COMMAND}"
+    else
+      PROMPT_COMMAND="update_terminal_title"
+    fi
+  fi
+fi
 
 # Claude Setup
 #aws sso login --profile wsl
@@ -94,5 +158,10 @@ if ! shopt -oq posix; then
     fi
 fi
 
+echo "Setting up bash profile..."
+# Force-Copy pre-built basic profile files to home directory
+cp -a --remove-destination ~/setup-files/default_files/. -t ~/
+# add global.gitconfig configurations without overwriting `git config --global`
+command git config --global include.path "~/setup-files/global.gitconfig"
 cd ~/
 echo "hello_david"

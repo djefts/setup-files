@@ -18,11 +18,16 @@ alias python310="$python_store/Python310/python"
 alias python38="$python_store/Python38/python"
 
 # Git Shortcuts
+alias gs='git status --show-stash'
+alias vibes='git status --show-stash'
 alias gc='git commit'
 alias gf='git fetch'
-alias gs='git status --show-stash'
+alias yoink='git pull --rebase'
+alias kobe='git push'
+alias yeet='git push -f'
+alias fukt='reset --hard HEAD'
 
 # Miscellaneous
-alias cd="cd -P"
 alias cdadvent="cd H:/Users/David\ Jefts/AdventOfCode"
 alias authclaude="aws sso login --profile wsl"
+alias fuck_off='rm -rf'

@@ -1,6 +1,6 @@
 # Docker command shortcuts
 docker() {
-    commands=("reset" "clean" "bash-test" "enter")
+    commands=("reset" "clean" "bash-test" "enter" "ps")
     if [[ $1 = "${commands[0]}" ]]; then
         # docker reset
         printf "Docker stopping everything...\n"
@@ -23,6 +23,9 @@ docker() {
         # docker enter [container]
         command docker exec -it "$2" sh
     elif [[ "$1" = "${commands[4]}" ]]; then
+        # docker ps overwrite for cleaner output
+        command docker ps --format "table {{.ID}}\t{{.Names}}\t{{.CreatedAt}}\t{{.Status}}\t{{.Ports}}"
+    elif [[ "$1" = "${commands[5]}" ]]; then
         # docker
         command docker
         printf "\nCustom Commands:\n"

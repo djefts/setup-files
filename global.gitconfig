@@ -14,6 +14,8 @@
 [push]
   autoSetupRemote = true
   default = upstream
+[pull]
+  rebase = true
 [rebase]
   autosquash = true
 [rerere]
@@ -37,3 +39,4 @@
 [alias]
   lgb = log --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset%n' --abbrev-commit --date=relative --branches
   hist = log --pretty=format:\"%h %ad | %s%d [%an]\" --graph --date=short
+  fukt = reset --hard HEAD

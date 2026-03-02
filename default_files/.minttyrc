@@ -1,5 +1,15 @@
 CtrlShiftShortcuts=yes
 FontHeight=10
+FontSmoothing=full
+Font=Consolas
 Columns=121
 Rows=60
 RewrapOnResize=yes
+Locale=en_US
+Charset=UTF-8
+Transparency=off
+CopyOnSelect=yes
+RightClickAction=paste
+TrimSelection=yes
+ScrollBar=right
+ScrollLines=5000
