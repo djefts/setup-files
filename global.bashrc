@@ -107,6 +107,7 @@ case "$TERM" in
     # for interactive usage, therefore let's launch them through winpty
     # when run inside `mintty`.
     if [[ ' msys cygwin win32 ' =~ .\ $OSTYPE\ .* ]]; then
+      echo "Setting up WINPTY for Git Bash"
       for name in node ipython php php5 psql python2.7; do
         case "$(type -p "$name".exe 2>/dev/null)" in
           '' | /usr/bin/*) continue ;;
@@ -133,6 +134,7 @@ done
 # Ensure update_terminal_title is called each prompt if available
 if declare -f update_terminal_title >/dev/null; then
   if [[ $PROMPT_COMMAND != *update_terminal_title* ]]; then
+    echo "Terminal title updater..."
     if [[ -n "$PROMPT_COMMAND" ]]; then
       PROMPT_COMMAND="update_terminal_title; ${PROMPT_COMMAND}"
     else
@@ -146,6 +148,7 @@ export CLAUDE_CODE_ATTRIBUTION_HEADER=0
 
 # enable programmable completion features
 if ! shopt -oq posix; then
+    echo "Setting up Bash completion..."
     if [ -f /usr/share/bash-completion/bash_completion ]; then
         . /usr/share/bash-completion/bash_completion
     elif [ -f /etc/bash_completion ]; then
