@@ -6,13 +6,16 @@ case $- in
     *) return;;
 esac
 
-echo "Setting up customized bash profile..."
+echo "Welcome to your customized Bash profile!"
 
 # Force-Copy pre-built basic profile files to home directory
 cp -a --remove-destination ~/setup-files/default_files/. -t ~/
 # add global.gitconfig configurations without overwriting `git config --global`
+command git config --global include.path "~/setup-files/global.gitconfig"
 # shellcheck disable=SC2088
 command git config --global include.path "~/setup-files/global.gitconfig"
+# allow WSL to open browser
+export BROWSER='/mnt/c/Program Files/Mozilla Firefox/firefox.exe'
 
 # DIRCOLORS Setup
 eval "$(dircolors -b ~/setup-files/.dir_colors)"
@@ -34,16 +37,6 @@ else
 fi
 unset color_prompt
 
-echo "Setting up bash aliases..."
-source ~/setup-files/.bash_aliases
-
-# Make cd change terminal-path if following a symlink
-alias cd="cd -P"
-
-# Share Bash history between terminal windows
-#   Courtesy of https://unix.stackexchange.com/a/1292
-HISTCONTROL=ignoredups:erasedups # Avoid duplicates
-# When the shell exits, append to the history file instead of overwriting it
 
 # ============================================================
 #  NODE.JS SHELL SETUP (FNM)
@@ -78,11 +71,18 @@ fi
 # ============================================================
 #  SHARED BASH HISTORY
 # ============================================================
-echo "Setting up shared bash history..."
-
+echo "Setting up aliases and history..."
+source ~/setup-files/.bash_aliases
+# Make cd change terminal-path if following a symlink
+alias cd="cd -P"
+# Share Bash history between terminal windows
+#   Courtesy of https://unix.stackexchange.com/a/1292
 # Avoid duplicates and share history across sessions
-HISTCONTROL=ignoredups:erasedups
+HISTCONTROL=ignoredups:erasedups # Avoid duplicates
+# When the shell exits, append to the history file instead of overwriting it
 shopt -s histappend
+# check the window size after each command and, if necessary, update the values of LINES and COLUMNS.
+shopt -s checkwinsize
 
 # Append and reread history on every prompt
 PROMPT_COMMAND="${PROMPT_COMMAND:+$PROMPT_COMMAND$'\n'}history -a; history -c; history -r"
@@ -96,20 +96,16 @@ if [[ $PROMPT_COMMAND != *update_terminal_title* ]]; then
     fi
 fi
 
-# check the window size after each command and, if necessary, update the values of LINES and COLUMNS.
-shopt -s checkwinsize
-
-# Copied from the default `aliases.sh` created by Git Bash:
-case "$TERM" in xterm*)
-  # The following programs are known to require a Win32 Console
-  # for interactive usage, therefore let's launch them through winpty
-  # when run inside `mintty`.
 
 # ============================================================
 #  WINPTY SETUP FOR GIT BASH
 # ============================================================
+# Copied from the default `aliases.sh` created by Git Bash:
 case "$TERM" in
   xterm*)
+    # The following programs are known to require a Win32 Console
+    # for interactive usage, therefore let's launch them through winpty
+    # when run inside `mintty`.
     if [[ ' msys cygwin win32 ' =~ .\ $OSTYPE\ .* ]]; then
       for name in node ipython php php5 psql python2.7; do
         case "$(type -p "$name".exe 2>/dev/null)" in
@@ -145,8 +141,7 @@ if declare -f update_terminal_title >/dev/null; then
   fi
 fi
 
-# Claude Setup
-#aws sso login --profile wsl
+# Claude bug fix
 export CLAUDE_CODE_ATTRIBUTION_HEADER=0
 
 # enable programmable completion features
@@ -157,14 +152,6 @@ if ! shopt -oq posix; then
         . /etc/bash_completion
     fi
 fi
-
-echo "Setting up bash profile..."
-# Force-Copy pre-built basic profile files to home directory
-cp -a --remove-destination ~/setup-files/default_files/. -t ~/
-# add global.gitconfig configurations without overwriting 'git config --global'
-command git config --global include.path "~/setup-files/global.gitconfig"
-# allow WSL to open browser
-export BROWSER='/mnt/c/Program Files/Mozilla Firefox/firefox.exe'
 
 cd ~/
 echo "hello_david"
