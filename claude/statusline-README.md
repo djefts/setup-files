@@ -51,4 +51,5 @@ vast majority of changes.
 
 ## Disclaimer
 
-I used Claude Code to do the first 90% of this and then fixed the last few things myself and make the code not slop.
+I used Claude Code to do the first 90% of this, but then had to fix the last few bugs myself and then make the code not 
+be full of AI garbage slop.
