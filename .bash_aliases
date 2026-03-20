@@ -12,10 +12,10 @@ python_store="/c/Users/David\ Jefts/AppData/Local/Programs/Python"
 if [[ $OSTYPE == "linux-gnu" ]]; then
   python_store="/mnt$python_store"
 fi
-alias python312="$python_store/Python312/python"
-alias python311="$python_store/Python311/python"
-alias python310="$python_store/Python310/python"
-alias python38="$python_store/Python38/python"
+#alias python312="$python_store/Python312/python"
+#alias python311="$python_store/Python311/python"
+#alias python310="$python_store/Python310/python"
+#alias python38="$python_store/Python38/python"
 alias pyvenvin="source .venv/bin/activate"
 
 # Git Shortcuts
@@ -29,6 +29,7 @@ alias yeet='git push -f'
 alias fukt='reset --hard HEAD'
 
 # Miscellaneous
+alias yarnfullinstall="yarn install --refresh-lockfile --check-cache --check-resolutions --inline-builds"
 alias cdadvent="cd H:/Users/David\ Jefts/AdventOfCode"
-alias authclaude="aws sso login --profile wsl"
+alias authclaude="aws sso login --profile dev"
 alias fuck_off='rm -rf'
