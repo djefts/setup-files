@@ -67,13 +67,13 @@ INPUT=$(cat)
 
 #=== HELPER FUNCTIONS ===#
 
-# 1. Simplify path: replace /home/david.jefts with ~, add trailing slash for dirs
+# 1. Simplify path: replace $HOME with ~, add trailing slash for dirs
 simplify_path() {
     local path="$1"
     # Replace hardcoded home path
-    path="${path/\/home\/david.jefts/\~}"
+    path="${path/$HOME/\~}"
     # Add trailing slash if it's a directory and doesn't already have one
-    if [[ -d "${path/#\~//home/david.jefts}" ]] && [[ ! "$path" =~ /$ ]]; then
+    if [[ -d "${path/#\~/$HOME}" ]] && [[ ! "$path" =~ /$ ]]; then
         path="${path}/"
     fi
     echo "$path"
@@ -222,7 +222,7 @@ get_jira_sprint_data() {
     fi
 
     # Read MCP config
-    local mcp_config="/home/david.jefts/.claude.json"
+    local mcp_config="$HOME/.claude.json"
     if [[ ! -f "$mcp_config" ]]; then
         echo "MCP config not found"
         return 1
@@ -401,9 +401,9 @@ echo "$INPUT" | jq -r '{extendedThinking, thinkingEnabled, alwaysThinkingEnabled
 OUTPUT_STYLE=$(echo "$INPUT" | jq -r '.output_style.name // empty')
 [[ -z "$OUTPUT_STYLE" ]] && OUTPUT_STYLE="${RED}N/A${RESET}"
 # Get reasoning effort and thinking mode from settings file if not in JSON input
-REASONING_EFFORT=$(jq -r '.effortLevel // empty' "/home/david.jefts/.claude/settings.json" 2>/dev/null)
+REASONING_EFFORT=$(jq -r '.effortLevel // empty' "$HOME/.claude/settings.json" 2>/dev/null)
 [[ -z "$REASONING_EFFORT" ]] && REASONING_EFFORT="${RED}N/A${RESET}"
-THINKING_FROM_SETTINGS=$(jq -r '.extendedThinking // .thinking // empty' "/home/david.jefts/.claude/settings.json" 2>/dev/null)
+THINKING_FROM_SETTINGS=$(jq -r '.extendedThinking // .thinking // empty' "$HOME/.claude/settings.json" 2>/dev/null)
 # If thinking mode wasn't found in JSON input, try settings file
 if [[ -z "$THINKING_ENABLED" ]] || [[ "$THINKING_ENABLED" == "false" ]]; then
     if [[ -n "$THINKING_FROM_SETTINGS" ]] && [[ "$THINKING_FROM_SETTINGS" != "false" ]]; then
