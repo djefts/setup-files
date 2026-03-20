@@ -215,10 +215,10 @@ get_jira_sprint_data() {
     if [[ -f "$cache_file" ]]; then
         local cache_age=$(( $(date +%s) - $(stat -c %Y "$cache_file" 2>/dev/null || echo 0) ))
         # Check cache is fresh
-#        if (( cache_age < cache_ttl )); then
-#            # cache fresh, no need to reload
-#            return 0
-#        fi
+        if (( cache_age < cache_ttl )); then
+            # cache fresh, no need to reload
+            return 0
+        fi
     fi
 
     # Read MCP config
@@ -453,9 +453,11 @@ if [[ "$DOCKER_AVAILABLE" == "true" ]]; then
 else
     DOCKER_COUNT="${RED}N/A${RESET}"
 fi
-
 if [[ "$SS_AVAILABLE" == "true" ]]; then
-    PORT_COUNT=$(ss -ltn 2>/dev/null | grep -E ':(3000|8080|5000|4200|8000|9000|3001|5173|4000)' | wc -l)
+    # Development ports: 3000-19999 listening on all interfaces (not localhost-only)
+    # Excludes localhost-only (127.0.0.1, ::ffff:127.0.0.1) internal services
+    # Deduplicates by port number (same service on IPv4 + IPv6 counts as 1)
+    PORT_COUNT=$(ss -ltn 2>/dev/null | grep -E ':(3[0-9]{3} |[4-9][0-9]{3} |1[0-9]{4} )' | grep -vE '(127\.0\.0\.1|::ffff:127\.0\.0\.1):' | awk '{n=split($4,a,":"); print a[n]}' | sort -u | wc -l)
     [[ -z "$PORT_COUNT" ]] && PORT_COUNT="${RED}N/A${RESET}"
 else
     PORT_COUNT="${RED}N/A${RESET}"
@@ -644,7 +646,7 @@ fi
 if [[ "$PORT_COUNT" == "${RED}N/A${RESET}" ]]; then
     PORT_DISPLAY="${RED}N/A${RESET}"
 else
-    PORT_DISPLAY="${GREEN}${PORT_COUNT}${RESET} ${WHITE}ports active${RESET}"
+    PORT_DISPLAY="${GREEN}${PORT_COUNT}${RESET} ${WHITE}service ports active${RESET}"
 fi
 
 LINE8="🐳 ${CYAN}${BOLD}Services:${RESET} ${DOCKER_DISPLAY} ${BREAK} 🔌 ${PORT_DISPLAY}"
