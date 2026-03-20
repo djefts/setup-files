@@ -39,7 +39,7 @@ unset color_prompt
 
 
 # ============================================================
-#  NODE.JS SHELL SETUP (FNM)
+#  NODE.JS SHELL SETUP (FNM/NVM)
 # ============================================================
 if [[ ' msys cygwin win32 ' =~ .*\ $OSTYPE\ .* ]]; then
   echo "Setting up FNM Node environment..."
@@ -65,6 +65,11 @@ if [[ ' msys cygwin win32 ' =~ .*\ $OSTYPE\ .* ]]; then
   else
     echo "FNM not installed."
   fi
+else
+  echo "Setting up NVM environment..."
+  export NVM_DIR="$HOME/.nvm"
+  [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
+  [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
 fi
 
 
