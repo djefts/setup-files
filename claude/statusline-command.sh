@@ -268,22 +268,35 @@ get_jira_sprint_data() {
                 sprint_end=$(echo "$sprint_data" | grep -oP 'endDate=\K[^,\]]+' | head -1)
             fi
         fi
-        # Add to total points (use awk for floating point addition)
-        if [[ "$story_pts" != "null" ]] && [[ "$story_pts" =~ ^[0-9]+(\.[0-9]+)?$ ]]; then
-            total_pts=$((total_pts + story_pts))
-        fi
         # Categorize
         if [[ "$status" == "Blocked" ]]; then
             blocked=$((blocked+1))
+            # Don't count blocked tickets in total points
         elif [[ "$status_cat" == "Done" ]] || [[ "$status" =~ ^(Done|Closed|Resolved)$ ]]; then
             complete=$((complete+1))
             done_pts=$((done_pts + story_pts))
+            # Add to total points only for non-blocked tickets
+            if [[ "$story_pts" != "null" ]] && [[ "$story_pts" =~ ^[0-9]+(\.[0-9]+)?$ ]]; then
+                total_pts=$((total_pts + story_pts))
+            fi
         elif [[ "$status" =~ ^(In Review)$ ]]; then
             in_review=$((in_review+1))
+            # Add to total points only for non-blocked tickets
+            if [[ "$story_pts" != "null" ]] && [[ "$story_pts" =~ ^[0-9]+(\.[0-9]+)?$ ]]; then
+                total_pts=$((total_pts + story_pts))
+            fi
         elif [[ "$status" =~ ^(In Work|In Progress)$ ]]; then
             in_progress=$((in_progress+1))
+            # Add to total points only for non-blocked tickets
+            if [[ "$story_pts" != "null" ]] && [[ "$story_pts" =~ ^[0-9]+(\.[0-9]+)?$ ]]; then
+                total_pts=$((total_pts + story_pts))
+            fi
         else
             todo=$((todo + 1))
+            # Add to total points only for non-blocked tickets
+            if [[ "$story_pts" != "null" ]] && [[ "$story_pts" =~ ^[0-9]+(\.[0-9]+)?$ ]]; then
+                total_pts=$((total_pts + story_pts))
+            fi
         fi
     done < <(jq -c '.issues[]' <<< "$jira_json" 2>/dev/null)
 
@@ -291,7 +304,46 @@ get_jira_sprint_data() {
     echo "${todo},${in_progress},${in_review},${complete},${blocked},${done_pts},${total_pts},${sprint_start},${sprint_end}" > "$cache_file"
 }
 
-# 8. Box drawing functions
+# 8. Get/update session token cache
+get_session_cache() {
+    local session_id="$1"
+    local current_input="$2"
+    local current_output="$3"
+    local current_cost="$4"
+    local current_duration="$5"
+
+    local cache_file="$CACHE_DIR/session-${session_id}.cache"
+
+    # Initialize cumulative values
+    local cumulative_input=0
+    local cumulative_output=0
+    local cumulative_cost=0
+    local cumulative_duration=0
+
+    # Read previous cache if exists
+    if [[ -f "$cache_file" ]]; then
+        IFS=',' read -r cumulative_input cumulative_output cumulative_cost cumulative_duration < "$cache_file"
+        # Handle empty/invalid values
+        [[ -z "$cumulative_input" ]] && cumulative_input=0
+        [[ -z "$cumulative_output" ]] && cumulative_output=0
+        [[ -z "$cumulative_cost" ]] && cumulative_cost=0
+        [[ -z "$cumulative_duration" ]] && cumulative_duration=0
+    fi
+
+    # Add current turn values to cumulative totals
+    cumulative_input=$((cumulative_input + current_input))
+    cumulative_output=$((cumulative_output + current_output))
+    cumulative_cost=$(awk "BEGIN {printf \"%.6f\", $cumulative_cost + $current_cost}")
+    cumulative_duration=$((cumulative_duration + current_duration))
+
+    # Write updated cache
+    echo "${cumulative_input},${cumulative_output},${cumulative_cost},${cumulative_duration}" > "$cache_file"
+
+    # Return cumulative values
+    echo "${cumulative_input},${cumulative_output},${cumulative_cost},${cumulative_duration}"
+}
+
+# 9. Box drawing functions
 draw_top_border() {
     local width="$1"
     local border=$(printf '═%.0s' $(seq 1 $((width-2))))
@@ -328,7 +380,7 @@ get_jira_sprint_data &
 # Extract from JSON input - OPTIMIZED: Single jq call with tab-separated `output`
 read -r SESSION_ID CWD PROJECT_DIR LINES_ADDED LINES_REMOVED CONTEXT_PCT \
     CONTEXT_CURRENT_INPUT CONTEXT_CURRENT_OUTPUT CONTEXT_CURRENT_CACHE_CREATE CONTEXT_CURRENT_CACHE_READ \
-    TOTAL_INPUT_TOKENS TOTAL_OUTPUT_TOKENS TOTAL_COST TOTAL_DURATION_MS MODEL_NAME CC_VERSION \
+    TURN_INPUT_TOKENS TURN_OUTPUT_TOKENS TURN_COST TURN_DURATION_MS MODEL_NAME CC_VERSION \
     <<< "$(echo "$INPUT" | jq -r '[
         .session_id,
         .workspace.current_dir,
@@ -353,16 +405,29 @@ read -r SESSION_ID CWD PROJECT_DIR LINES_ADDED LINES_REMOVED CONTEXT_PCT \
 [[ -z "$CWD" ]] && CWD=$(pwd)
 [[ -z "$LINES_ADDED" ]] && LINES_ADDED=0
 [[ -z "$LINES_REMOVED" ]] && LINES_REMOVED=0
+[[ "$CONTEXT_PCT" == "null" || -z "$CONTEXT_PCT" ]] && CONTEXT_PCT=0
 [[ -z "$CONTEXT_CURRENT_INPUT" ]] && CONTEXT_CURRENT_INPUT=0
 [[ -z "$CONTEXT_CURRENT_OUTPUT" ]] && CONTEXT_CURRENT_OUTPUT=0
 [[ -z "$CONTEXT_CURRENT_CACHE_CREATE" ]] && CONTEXT_CURRENT_CACHE_CREATE=0
 [[ -z "$CONTEXT_CURRENT_CACHE_READ" ]] && CONTEXT_CURRENT_CACHE_READ=0
-[[ -z "$TOTAL_INPUT_TOKENS" ]] && TOTAL_INPUT_TOKENS=0
-[[ -z "$TOTAL_OUTPUT_TOKENS" ]] && TOTAL_OUTPUT_TOKENS=0
-[[ -z "$TOTAL_COST" ]] && TOTAL_COST=0
-[[ -z "$TOTAL_DURATION_MS" ]] && TOTAL_DURATION_MS=0
+[[ -z "$TURN_INPUT_TOKENS" ]] && TURN_INPUT_TOKENS=0
+[[ -z "$TURN_OUTPUT_TOKENS" ]] && TURN_OUTPUT_TOKENS=0
+[[ -z "$TURN_COST" ]] && TURN_COST=0
+[[ -z "$TURN_DURATION_MS" ]] && TURN_DURATION_MS=0
 [[ -z "$MODEL_NAME" ]] && MODEL_NAME=""
 [[ -z "$CC_VERSION" ]] && CC_VERSION=""
+
+# Get or update session cache with cumulative totals
+if [[ -n "$SESSION_ID" ]]; then
+    IFS=',' read -r TOTAL_INPUT_TOKENS TOTAL_OUTPUT_TOKENS TOTAL_COST TOTAL_DURATION_MS \
+        < <(get_session_cache "$SESSION_ID" "$TURN_INPUT_TOKENS" "$TURN_OUTPUT_TOKENS" "$TURN_COST" "$TURN_DURATION_MS")
+else
+    # Fallback if no session ID (shouldn't happen)
+    TOTAL_INPUT_TOKENS="$TURN_INPUT_TOKENS"
+    TOTAL_OUTPUT_TOKENS="$TURN_OUTPUT_TOKENS"
+    TOTAL_COST="$TURN_COST"
+    TOTAL_DURATION_MS="$TURN_DURATION_MS"
+fi
 
 TOTAL_TOKENS=$((TOTAL_INPUT_TOKENS + TOTAL_OUTPUT_TOKENS))
 
@@ -553,7 +618,7 @@ if [[ -n "$CONTEXT_PCT" ]]; then
     CONTEXT_CURRENT_TOTAL=$((CONTEXT_CURRENT_IO + CONTEXT_CURRENT_CACHE))
 
     # Display as equation: I/O + Cache = Total
-    LINE3="🧠 ${CYAN}${BOLD}Context:${RESET} ${CONTEXT_BAR} ${CONTEXT_COLOR}${CONTEXT_PCT}%${RESET} 💾 ${GRAY}User: $(format_number $CONTEXT_CURRENT_IO) + Cache: $(format_number $CONTEXT_CURRENT_CACHE) = Total: $(format_number $CONTEXT_CURRENT_TOTAL)${RESET}"
+    LINE3="🧠 ${CYAN}${BOLD}Context:${RESET} ${CONTEXT_BAR} ${CONTEXT_COLOR}${CONTEXT_PCT}%${RESET} ${BREAK} 💾 ${GRAY}User: $(format_number $CONTEXT_CURRENT_IO) + Cache: $(format_number $CONTEXT_CURRENT_CACHE) = Total: $(format_number $CONTEXT_CURRENT_TOTAL)${RESET}"
 else
     LINE3="🧠 ${CYAN}${BOLD}Context:${RESET} ${RED}N/A${RESET}"
 fi
