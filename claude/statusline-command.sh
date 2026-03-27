@@ -405,7 +405,7 @@ read -r SESSION_ID CWD PROJECT_DIR LINES_ADDED LINES_REMOVED CONTEXT_PCT \
 [[ -z "$CWD" ]] && CWD=$(pwd)
 [[ -z "$LINES_ADDED" ]] && LINES_ADDED=0
 [[ -z "$LINES_REMOVED" ]] && LINES_REMOVED=0
-[[ "$CONTEXT_PCT" == "null" || -z "$CONTEXT_PCT" ]] && CONTEXT_PCT=0
+[[ -z "$CONTEXT_PCT" ]] && CONTEXT_PCT=0
 [[ -z "$CONTEXT_CURRENT_INPUT" ]] && CONTEXT_CURRENT_INPUT=0
 [[ -z "$CONTEXT_CURRENT_OUTPUT" ]] && CONTEXT_CURRENT_OUTPUT=0
 [[ -z "$CONTEXT_CURRENT_CACHE_CREATE" ]] && CONTEXT_CURRENT_CACHE_CREATE=0
@@ -600,28 +600,24 @@ else
 fi
 
 # Line 3: Context
-if [[ -n "$CONTEXT_PCT" ]]; then
-    CONTEXT_BAR=$(progress_bar "$CONTEXT_PCT")
-    CONTEXT_COLOR="${GREEN}"
-    if (( $(awk "BEGIN {print ($CONTEXT_PCT >= 75)}") )); then
-        CONTEXT_COLOR="${RED}"
-    elif (( $(awk "BEGIN {print ($CONTEXT_PCT >= 50)}") )); then
-        CONTEXT_COLOR="${YELLOW}"
-    fi
-
-    # Calculate current turn total using correct formula:
-    # I/O = input_tokens + output_tokens
-    # Cache = cache_creation_input_tokens + cache_read_input_tokens
-    # Total = I/O + Cache
-    CONTEXT_CURRENT_IO=$((CONTEXT_CURRENT_INPUT + CONTEXT_CURRENT_OUTPUT))
-    CONTEXT_CURRENT_CACHE=$((CONTEXT_CURRENT_CACHE_CREATE + CONTEXT_CURRENT_CACHE_READ))
-    CONTEXT_CURRENT_TOTAL=$((CONTEXT_CURRENT_IO + CONTEXT_CURRENT_CACHE))
-
-    # Display as equation: I/O + Cache = Total
-    LINE3="🧠 ${CYAN}${BOLD}Context:${RESET} ${CONTEXT_BAR} ${CONTEXT_COLOR}${CONTEXT_PCT}%${RESET} ${BREAK} 💾 ${GRAY}User: $(format_number $CONTEXT_CURRENT_IO) + Cache: $(format_number $CONTEXT_CURRENT_CACHE) = Total: $(format_number $CONTEXT_CURRENT_TOTAL)${RESET}"
-else
-    LINE3="🧠 ${CYAN}${BOLD}Context:${RESET} ${RED}N/A${RESET}"
+CONTEXT_BAR=$(progress_bar "$CONTEXT_PCT")
+CONTEXT_COLOR="${GREEN}"
+if (( $(awk "BEGIN {print ($CONTEXT_PCT >= 75)}") )); then
+    CONTEXT_COLOR="${RED}"
+elif (( $(awk "BEGIN {print ($CONTEXT_PCT >= 50)}") )); then
+    CONTEXT_COLOR="${YELLOW}"
 fi
+
+# Calculate current turn total using correct formula:
+# I/O = input_tokens + output_tokens
+# Cache = cache_creation_input_tokens + cache_read_input_tokens
+# Total = I/O + Cache
+CONTEXT_CURRENT_IO=$((CONTEXT_CURRENT_INPUT + CONTEXT_CURRENT_OUTPUT))
+CONTEXT_CURRENT_CACHE=$((CONTEXT_CURRENT_CACHE_CREATE + CONTEXT_CURRENT_CACHE_READ))
+CONTEXT_CURRENT_TOTAL=$((CONTEXT_CURRENT_IO + CONTEXT_CURRENT_CACHE))
+
+# Display as equation: I/O + Cache = Total
+LINE3="🧠 ${CYAN}${BOLD}Context:${RESET} ${CONTEXT_BAR} ${CONTEXT_COLOR}${CONTEXT_PCT}%${RESET} ${BREAK} 💾 ${GRAY}User: $(format_number $CONTEXT_CURRENT_IO) + Cache: $(format_number $CONTEXT_CURRENT_CACHE) = Total: $(format_number $CONTEXT_CURRENT_TOTAL)${RESET}"
 
 # Line 4: Session
 LINE4="💸 ${CYAN}${BOLD}Session:${RESET} "
