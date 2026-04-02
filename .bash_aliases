@@ -33,3 +33,5 @@ alias yarnfullinstall="yarn install --refresh-lockfile --check-cache --check-res
 alias cdadvent="cd H:/Users/David\ Jefts/AdventOfCode"
 alias authclaude="aws sso login --profile dev"
 alias fuck_off='rm -rf'
+alias reset='reset && . ~/.bashrc'
+
