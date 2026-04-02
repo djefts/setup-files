@@ -14,8 +14,6 @@ cp -a --remove-destination ~/setup-files/default_files/. -t ~/
 command git config --global include.path "~/setup-files/global.gitconfig"
 # shellcheck disable=SC2088
 command git config --global include.path "~/setup-files/global.gitconfig"
-# allow WSL to open browser
-export BROWSER='/mnt/c/Program Files/Mozilla Firefox/firefox.exe'
 
 # DIRCOLORS Setup
 eval "$(dircolors -b ~/setup-files/.dir_colors)"
@@ -161,5 +159,5 @@ if ! shopt -oq posix; then
     fi
 fi
 
-cd ~/
 echo "hello_david"
+

@@ -25,7 +25,7 @@ alias gc='git commit'
 alias gf='git fetch'
 alias yoink='git pull --rebase'
 alias kobe='git push'
-alias yeet='git push -f'
+alias yeet='git push --force-with-lease'
 alias fukt='reset --hard HEAD'
 
 # Miscellaneous
