@@ -22,6 +22,8 @@ set so=7
 set showmode
 " Enable type file detection
 filetype on
+" Enable filetype plugins and indent files
+filetype plugin indent on
 " Show line numbers
 set number
 " Highlight current row of cursor
@@ -69,10 +71,16 @@ set stl+=\ Row:\ %l/%L\ \ Col:\ %c " Row: [Line]/[Total Lines]  Col: [Column]
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 " spaces rule, tabs drool
 set expandtab
-" 4-space indents, tab key indents
+" Auto-indent new lines
+set autoindent
+" Smart indent for code blocks
+set smartindent
+" 4-space indents, tab key indents (default, will be auto-detected per file)
 set smarttab shiftwidth=4
 " different width for TABs and indents just in case
 set tabstop=8 softtabstop=0
+" Auto-detect indentation (2 or 4 spaces) when opening files
+autocmd BufReadPost * call DetectIndent()
 
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 " => Turn persistent undo on
@@ -135,4 +143,31 @@ function! VisualSelection(direction, extra_filter) range
 
     let @/ = l:pattern
     let @" = l:saved_reg
+endfunction
+
+" Detect indentation (2 or 4 spaces) from file content
+function! DetectIndent()
+    let l:two_space = 0
+    let l:four_space = 0
+    let l:max_lines = min([line('$'), 100])
+
+    " Sample first 100 lines
+    for l:lnum in range(1, l:max_lines)
+        let l:line = getline(l:lnum)
+        " Check for lines starting with 2 spaces (but not 4)
+        if l:line =~ '^\s\s\S' && l:line !~ '^\s\s\s\s'
+            let l:two_space += 1
+        endif
+        " Check for lines starting with 4 spaces
+        if l:line =~ '^\s\s\s\s\S'
+            let l:four_space += 1
+        endif
+    endfor
+
+    " Set indentation based on what we found
+    if l:two_space > l:four_space && l:two_space > 5
+        setlocal shiftwidth=2 softtabstop=2
+    elseif l:four_space > 5
+        setlocal shiftwidth=4 softtabstop=4
+    endif
 endfunction
