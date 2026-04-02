@@ -89,8 +89,10 @@ format_number() {
         } else if (n <= 1000000) {
             printf "%.1fK", n / 1000
         } else if (n <= 1000000000) {
-            printf "%.1fB", n / 1000000000
+            printf "%.1fM", n / 1000000
         } else if (n <= 1000000000000) {
+            printf "%.1fB", n / 1000000000
+        } else if (n <= 1000000000000000) {
             printf "%.1fT", n / 1000000000000
         } else {
             printf "DAMN FAM"
@@ -307,37 +309,62 @@ get_jira_sprint_data() {
 # 8. Get/update session token cache
 get_session_cache() {
     local session_id="$1"
-    local current_input="$2"
-    local current_output="$3"
-    local current_cost="$4"
-    local current_duration="$5"
+    local cc_session_input="$2"
+    local cc_session_output="$3"
+    local cc_session_cost="$4"
+    local cc_session_duration="$5"
 
     local cache_file="$CACHE_DIR/session-${session_id}.cache"
 
-    # Initialize cumulative values
+    # Initialize values
     local cumulative_input=0
     local cumulative_output=0
     local cumulative_cost=0
     local cumulative_duration=0
+    local previous_cc_input=0
+    local previous_cc_output=0
+    local previous_cc_cost=0
+    local previous_cc_duration=0
 
     # Read previous cache if exists
     if [[ -f "$cache_file" ]]; then
-        IFS=',' read -r cumulative_input cumulative_output cumulative_cost cumulative_duration < "$cache_file"
+        IFS=',' read -r cumulative_input cumulative_output cumulative_cost cumulative_duration \
+            previous_cc_input previous_cc_output previous_cc_cost previous_cc_duration < "$cache_file"
         # Handle empty/invalid values
         [[ -z "$cumulative_input" ]] && cumulative_input=0
         [[ -z "$cumulative_output" ]] && cumulative_output=0
         [[ -z "$cumulative_cost" ]] && cumulative_cost=0
         [[ -z "$cumulative_duration" ]] && cumulative_duration=0
+        [[ -z "$previous_cc_input" ]] && previous_cc_input=0
+        [[ -z "$previous_cc_output" ]] && previous_cc_output=0
+        [[ -z "$previous_cc_cost" ]] && previous_cc_cost=0
+        [[ -z "$previous_cc_duration" ]] && previous_cc_duration=0
     fi
 
-    # Add current turn values to cumulative totals
-    cumulative_input=$((cumulative_input + current_input))
-    cumulative_output=$((cumulative_output + current_output))
-    cumulative_cost=$(awk "BEGIN {printf \"%.6f\", $cumulative_cost + $current_cost}")
-    cumulative_duration=$((cumulative_duration + current_duration))
+    # Calculate deltas - if CC session totals decreased, CC restarted
+    local delta_input delta_output delta_duration
+    if (( cc_session_input < previous_cc_input )); then
+        # CC restarted, just add the new session totals
+        delta_input=$cc_session_input
+        delta_output=$cc_session_output
+        delta_duration=$cc_session_duration
+        delta_cost=$cc_session_cost
+    else
+        # Normal case: add the delta since last turn
+        delta_input=$((cc_session_input - previous_cc_input))
+        delta_output=$((cc_session_output - previous_cc_output))
+        delta_duration=$((cc_session_duration - previous_cc_duration))
+        delta_cost=$(awk "BEGIN {printf \"%.6f\", $cc_session_cost - $previous_cc_cost}")
+    fi
 
-    # Write updated cache
-    echo "${cumulative_input},${cumulative_output},${cumulative_cost},${cumulative_duration}" > "$cache_file"
+    # Add deltas to cumulative totals
+    cumulative_input=$((cumulative_input + delta_input))
+    cumulative_output=$((cumulative_output + delta_output))
+    cumulative_cost=$(awk "BEGIN {printf \"%.6f\", $cumulative_cost + $delta_cost}")
+    cumulative_duration=$((cumulative_duration + delta_duration))
+
+    # Write updated cache with current CC session totals for next comparison
+    echo "${cumulative_input},${cumulative_output},${cumulative_cost},${cumulative_duration},${cc_session_input},${cc_session_output},${cc_session_cost},${cc_session_duration}" > "$cache_file"
 
     # Return cumulative values
     echo "${cumulative_input},${cumulative_output},${cumulative_cost},${cumulative_duration}"
