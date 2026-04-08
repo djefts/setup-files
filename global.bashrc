@@ -12,8 +12,6 @@ echo "Welcome to your customized Bash profile!"
 cp -a --remove-destination ~/setup-files/default_files/. -t ~/
 # add global.gitconfig configurations without overwriting `git config --global`
 command git config --global include.path "~/setup-files/global.gitconfig"
-# shellcheck disable=SC2088
-command git config --global include.path "~/setup-files/global.gitconfig"
 
 # DIRCOLORS Setup
 eval "$(dircolors -b ~/setup-files/.dir_colors)"

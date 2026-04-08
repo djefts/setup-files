@@ -34,4 +34,5 @@ alias cdadvent="cd H:/Users/David\ Jefts/AdventOfCode"
 alias authclaude="aws sso login --profile dev"
 alias fuck_off='rm -rf'
 alias reset='reset && . ~/.bashrc'
+alias jitme='sudo epmcli --request-policies'
 
