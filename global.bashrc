@@ -1,5 +1,8 @@
 # shellcheck source=~
 
+# ============================================================
+#  INTERACTIVE CHECK
+# ============================================================
 # If not running interactively, don't do this stuff
 case $- in
     *i*) ;;
@@ -8,24 +11,48 @@ esac
 
 echo "Welcome to your customized Bash profile!"
 
-# Force-Copy pre-built basic profile files to home directory
+
+# ============================================================
+#  CONFIG FILE SYNCHRONIZATION
+# ============================================================
+# Copy pre-built profile files from setup-files to home directory
+echo "Copying default config files..."
 cp -a --remove-destination ~/setup-files/default_files/. -t ~/
-# add global.gitconfig configurations without overwriting `git config --global`
+
+# Include global git config without overwriting local settings
+echo "Configuring git..."
 command git config --global include.path "~/setup-files/global.gitconfig"
 
-# DIRCOLORS Setup
+
+# ============================================================
+#  CUSTOM ALIASES AND COMMANDS
+# ============================================================
+# Load custom aliases and bash functions early so they're available everywhere
+echo "Loading custom aliases and commands..."
+source ~/setup-files/.bash_aliases
+for f in ~/setup-files/bash_commands/*; do
+  [[ "$(basename "$f")" == README* ]] && continue
+  source "$f"
+done
+
+
+# ============================================================
+#  COLORS AND PROMPT
+# ============================================================
+echo "Setting up colors..."
 eval "$(dircolors -b ~/setup-files/.dir_colors)"
+
+# Detect color support
 case "$TERM" in xterm-color|*-256color)
     color_prompt=yes;;
 esac
 if [ -x /usr/bin/tput ] && tput setaf 1 >&/dev/null; then
-    # We have color support; assume it's compliant with Ecma-48
-    # (ISO/IEC-6429). (Lack of such support is extremely rare, and such
-    # a case would tend to support setf rather than setaf.)
     color_prompt=yes
 else
     color_prompt=
 fi
+
+# Set prompt based on color support
 if [ "$color_prompt" = yes ]; then
     PS1='${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ '
 else
@@ -70,43 +97,28 @@ fi
 
 
 # ============================================================
-#  SHARED BASH HISTORY
+#  BASH HISTORY AND SHELL OPTIONS
 # ============================================================
-echo "Setting up aliases and history..."
-source ~/setup-files/.bash_aliases
-# Make cd change terminal-path if following a symlink
-alias cd="cd -P"
-# Share Bash history between terminal windows
-#   Courtesy of https://unix.stackexchange.com/a/1292
-# Avoid duplicates and share history across sessions
-HISTCONTROL=ignoredups:erasedups # Avoid duplicates
-# When the shell exits, append to the history file instead of overwriting it
-shopt -s histappend
-# check the window size after each command and, if necessary, update the values of LINES and COLUMNS.
-shopt -s checkwinsize
+echo "Configuring history and shell options..."
 
-# Append and reread history on every prompt
+# Make cd resolve symlinks (always use physical path)
+alias cd="cd -P"
+
+# Share Bash history between terminal windows
+# Courtesy of https://unix.stackexchange.com/a/1292
+HISTCONTROL=ignoredups:erasedups
+shopt -s histappend
+shopt -s checkwinsize
 PROMPT_COMMAND="${PROMPT_COMMAND:+$PROMPT_COMMAND$'\n'}history -a; history -c; history -r"
 
-# Automatically hook into PROMPT_COMMAND if not already present
-if [[ $PROMPT_COMMAND != *update_terminal_title* ]]; then
-    if [[ -n "$PROMPT_COMMAND" ]]; then
-        PROMPT_COMMAND="update_terminal_title; ${PROMPT_COMMAND}"
-    else
-        PROMPT_COMMAND="update_terminal_title"
-    fi
-fi
-
 
 # ============================================================
-#  WINPTY SETUP FOR GIT BASH
+#  WINPTY SETUP (WINDOWS GIT BASH)
 # ============================================================
-# Copied from the default `aliases.sh` created by Git Bash:
+# Launch certain programs through winpty for Windows compatibility
+# Copied from default aliases.sh created by Git Bash
 case "$TERM" in
   xterm*)
-    # The following programs are known to require a Win32 Console
-    # for interactive usage, therefore let's launch them through winpty
-    # when run inside `mintty`.
     if [[ ' msys cygwin win32 ' =~ .\ $OSTYPE\ .* ]]; then
       echo "Setting up WINPTY for Git Bash"
       for name in node ipython php php5 psql python2.7; do
@@ -121,23 +133,11 @@ esac
 
 
 # ============================================================
-#  CUSTOM COMMANDS AND FUNCTIONS
-# ============================================================
-echo "Sourcing custom bash commands..."
-for f in ~/setup-files/bash_commands/*; do
-  # Skip README files
-  [[ "$(basename "$f")" == README* ]] && continue
-  source "$f"
-done
-
-
-# ============================================================
 #  TERMINAL TITLE UPDATER
 # ============================================================
-# Ensure update_terminal_title is called each prompt if available
+# Hook update_terminal_title function into PROMPT_COMMAND if defined
 if declare -f update_terminal_title >/dev/null; then
   if [[ $PROMPT_COMMAND != *update_terminal_title* ]]; then
-    echo "Terminal title updater..."
     if [[ -n "$PROMPT_COMMAND" ]]; then
       PROMPT_COMMAND="update_terminal_title; ${PROMPT_COMMAND}"
     else
@@ -146,10 +146,11 @@ if declare -f update_terminal_title >/dev/null; then
   fi
 fi
 
-# Claude bug fix
-export CLAUDE_CODE_ATTRIBUTION_HEADER=0
 
-# enable programmable completion features
+# ============================================================
+#  BASH COMPLETION
+# ============================================================
+# Enable programmable completion features
 if ! shopt -oq posix; then
     echo "Setting up Bash completion..."
     if [ -f /usr/share/bash-completion/bash_completion ]; then
@@ -159,7 +160,12 @@ if ! shopt -oq posix; then
     fi
 fi
 
-# Auto-install missing crontab entries from cron-scripts (if crontab available)
+
+# ============================================================
+#  CRONTAB VALIDATION
+# ============================================================
+# Auto-install missing crontab entries from cron-scripts directory
+# Only runs if crontab is available and user has permission
 if command -v crontab &>/dev/null && crontab -l &>/dev/null; then
     echo "Checking crontab entries..."
     current_cron=$(crontab -l 2>/dev/null || echo "")
@@ -175,6 +181,13 @@ if command -v crontab &>/dev/null && crontab -l &>/dev/null; then
         (echo "$current_cron"; echo "$new_entries") | crontab -
     fi
 fi
+
+
+# ============================================================
+#  ENVIRONMENT TWEAKS
+# ============================================================
+# Disable Claude Code attribution header
+export CLAUDE_CODE_ATTRIBUTION_HEADER=0
 
 printf "\nwelcome david\n"
 
