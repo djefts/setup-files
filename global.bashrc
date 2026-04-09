@@ -125,6 +125,8 @@ esac
 # ============================================================
 echo "Sourcing custom bash commands..."
 for f in ~/setup-files/bash_commands/*; do
+  # Skip README files
+  [[ "$(basename "$f")" == README* ]] && continue
   source "$f"
 done
 
@@ -157,5 +159,19 @@ if ! shopt -oq posix; then
     fi
 fi
 
-echo "hello_david"
+# Auto-install missing crontab entries from cron-scripts
+current_cron=$(crontab -l 2>/dev/null || echo "")
+new_entries=""
+while IFS= read -r script; do
+    expected=$(grep "^# CRONTAB:" "$script" | sed 's/^# CRONTAB: //')
+    if [[ -n "$expected" ]] && ! echo "$current_cron" | grep -qF "$(basename "$script")"; then
+        echo "⚠️  Missing cron for $(basename "$script"), adding: $expected"
+        new_entries="$new_entries$expected"$'\n'
+    fi
+done < <(find ~/setup-files/cron-scripts -name "*.sh" -type f 2>/dev/null)
+if [[ -n "$new_entries" ]]; then
+    (echo "$current_cron"; echo "$new_entries") | crontab -
+fi
+
+printf "\nwelcome david\n"
 

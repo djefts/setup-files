@@ -46,7 +46,7 @@ source ~/.bashrc
 ### Adding cron scripts:
 1. Create script in `cron-scripts/`
 2. Add `# CRONTAB: <schedule> <path>` comment to script
-3. Run `crontab -e` and add the line (validator will warn if missing)
+3. Next shell startup will automatically add it to crontab
 
 ## Important Rules
 
