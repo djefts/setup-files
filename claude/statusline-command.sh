@@ -259,8 +259,15 @@ get_jira_sprint_data() {
 
     # Count tickets by status
     while IFS= read -r issue; do
-        IFS=$'\t' read -r status status_cat story_pts < <(jq -r '[.status.name // "Unknown", .status.category // "Unknown", .customfield_10106.value // 0] | @tsv' <<< "${issue}" 2>/dev/null)
-        story_pts=${story_pts%.*}  # ignore decimals
+        IFS=$'\t' read -r status status_cat story_pts < <(jq -r '[.status.name // "Unknown", .status.category // "Unknown", .customfield_10106.value // "null"] | @tsv' <<< "${issue}" 2>/dev/null)
+
+        # Convert story points - handle null and decimals
+        if [[ "$story_pts" == "null" ]] || [[ -z "$story_pts" ]]; then
+            story_pts=0
+        else
+            story_pts=${story_pts%.*}  # ignore decimals
+        fi
+
         # Get sprint dates from first issue
         if [[ -z "$sprint_start" ]]; then
             local sprint_data=$(echo "$issue" | jq -r '.customfield_10104.value[0] // ""' 2>/dev/null)
@@ -274,32 +281,33 @@ get_jira_sprint_data() {
         if [[ "$status" == "Blocked" ]]; then
             blocked=$((blocked+1))
             # Don't count blocked tickets in total points
-        elif [[ "$status_cat" == "Done" ]] || [[ "$status" =~ ^(Done|Closed|Resolved)$ ]]; then
+        elif [[ "$status" =~ ^(Done|Closed|Resolved)$ ]]; then
+            # Only count as complete if status name is Done/Closed/Resolved (not Cancelled)
             complete=$((complete+1))
-            done_pts=$((done_pts + story_pts))
-            # Add to total points only for non-blocked tickets
-            if [[ "$story_pts" != "null" ]] && [[ "$story_pts" =~ ^[0-9]+(\.[0-9]+)?$ ]]; then
+            if (( story_pts > 0 )); then
+                done_pts=$((done_pts + story_pts))
                 total_pts=$((total_pts + story_pts))
             fi
         elif [[ "$status" =~ ^(In Review)$ ]]; then
             in_review=$((in_review+1))
-            # Add to total points only for non-blocked tickets
-            if [[ "$story_pts" != "null" ]] && [[ "$story_pts" =~ ^[0-9]+(\.[0-9]+)?$ ]]; then
+            # Count In Review toward completion for burndown
+            if (( story_pts > 0 )); then
+                done_pts=$((done_pts + story_pts))
                 total_pts=$((total_pts + story_pts))
             fi
         elif [[ "$status" =~ ^(In Work|In Progress)$ ]]; then
             in_progress=$((in_progress+1))
-            # Add to total points only for non-blocked tickets
-            if [[ "$story_pts" != "null" ]] && [[ "$story_pts" =~ ^[0-9]+(\.[0-9]+)?$ ]]; then
+            if (( story_pts > 0 )); then
                 total_pts=$((total_pts + story_pts))
             fi
-        else
+        elif [[ "$status_cat" == "To Do" ]]; then
+            # Only count as todo if category is "To Do" (skip Cancelled, etc)
             todo=$((todo + 1))
-            # Add to total points only for non-blocked tickets
-            if [[ "$story_pts" != "null" ]] && [[ "$story_pts" =~ ^[0-9]+(\.[0-9]+)?$ ]]; then
+            if (( story_pts > 0 )); then
                 total_pts=$((total_pts + story_pts))
             fi
         fi
+        # Ignore other statuses (Cancelled, etc) - don't count in any category
     done < <(jq -c '.issues[]' <<< "$jira_json" 2>/dev/null)
 
     # Write cache
@@ -681,46 +689,54 @@ LINE6="🧩 ${CYAN}${BOLD}Thinking:${RESET} ${THINKING_STATUS} ${BREAK} ${CYAN}$
 # Line 7: Jira
 # Determine status
 if [[ -n "${DAYS_OFF}" ]]; then
+    # Format days_off value (get absolute value for display)
+    local days_display
+    if (( $(bc -l <<< "${DAYS_OFF} < 0") )); then
+        days_display=$(bc -l <<< "scale=1; ${DAYS_OFF} * -1")
+    else
+        days_display=$(bc -l <<< "scale=1; ${DAYS_OFF}")
+    fi
+
     if (( $(bc -l <<< "${DAYS_OFF} >= 2") )); then
         burndown_emoji="🚀"
         burndown_msg="Usain Bolt"
-        burndown_days="+${DAYS_OFF}d"
+        burndown_days="~${days_display}d ahead"
     elif (( $(bc -l <<< "${DAYS_OFF} >= 0.5") )); then
         burndown_emoji="📈"
         burndown_msg="You shmoovin!"
-        burndown_days="+${DAYS_OFF}d"
+        burndown_days="~${days_display}d ahead"
     elif (( $(bc -l <<< "${DAYS_OFF} > -0.5") )); then
         burndown_emoji="🎯"
         burndown_msg="on track"
-        burndown_days="${DAYS_OFF}d"
+        burndown_days="on track"
     elif (( $(bc -l <<< "${DAYS_OFF} > -${SPRINT_TICKET_AVG}") )); then
         burndown_emoji="📉"
         burndown_msg="Get faster"
-        burndown_days="${DAYS_OFF}d"
+        burndown_days="~${days_display}d behind"
     elif (( $(bc -l <<< "${DAYS_OFF} > -(${SPRINT_TICKET_AVG} * 2)") )); then
         burndown_emoji="⬇️"
         burndown_msg="You're behind!"
-        burndown_days="${DAYS_OFF}d"
+        burndown_days="~${days_display}d behind"
     elif (( $(bc -l <<< "${DAYS_OFF} > -(${SPRINT_TICKET_AVG} * 3)") )); then
         burndown_emoji="🐌"
         burndown_msg="WORK FASTER"
-        burndown_days="${DAYS_OFF}d"
+        burndown_days="~${days_display}d behind"
     elif (( $(bc -l <<< "${DAYS_OFF} < ${DAYS_LEFT}") )); then
         burndown_emoji="🚨"
         burndown_msg="SPRINT AT RISK"
-        burndown_days="${DAYS_OFF}d"
+        burndown_days="~${days_display}d behind"
     else
         burndown_emoji="☠️"
         burndown_msg="RIP"
-        burndown_days="${DAYS_OFF}d"
+        burndown_days="~${days_display}d behind"
     fi
 else
     burndown_emoji=""
     burndown_msg="ERROR"
     burndown_days="ERROR"
 fi
-ticket_display="${GRAY}tickets: ${TICKETS_TODO} → ${TICKETS_INPROGRESS} → ${TICKETS_INREVIEW} → ${TICKETS_COMPLETE}${RESET} ${SEPARATOR} 🛑 ${GRAY}${TICKETS_BLOCKED}${RESET}"
-burndown_display="${GRAY}${POINTS_DONE}/${POINTS_TOTAL}pts${RESET} ${SEPARATOR} ${GRAY}${burndown_days} left${RESET} ${SEPARATOR} ${GRAY}${burndown_emoji} ${burndown_msg}${RESET}"
+ticket_display="${GRAY}tickets: ${TICKETS_TODO}→${TICKETS_INPROGRESS}→${TICKETS_INREVIEW}→${TICKETS_COMPLETE}${RESET} ${SEPARATOR} 🛑 ${GRAY}${TICKETS_BLOCKED}${RESET}"
+burndown_display="${GRAY}${POINTS_DONE}/${POINTS_TOTAL}pts${RESET} ${SEPARATOR} ${GRAY}${burndown_days}${RESET} ${SEPARATOR} ${GRAY}${burndown_emoji} ${burndown_msg}${RESET}"
 LINE7="🎫 ${CYAN}${BOLD}Jira:${RESET} ${ticket_display} ${BREAK} ${burndown_display}"
 
 # Line 8: Services
