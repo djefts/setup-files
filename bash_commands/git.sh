@@ -34,30 +34,40 @@ git() { (
         fi
     elif [[ $1 = "${commands[7]}" ]]; then
         # Pull all remote branches from origin that have a local copy
-        REMOTES=$(git remote | xargs -n1 echo)
         CLB=$(git rev-parse --abbrev-ref HEAD) # Current Local Branch
-        echo "$REMOTES" | while read -r REMOTE; do
-            git fetch --all
-            echo "updated $REMOTE"
-            git remote show $REMOTE -n | awk '/merges with remote/{print $5" "$1}' | while read -r RB LB; do
-                echo "checking branch $RB"
-                # awk(search) for "[local-branch] merges with remote [remote-branch]"
-                ARB="refs/remotes/$REMOTE/$RB"                             # remote branch full path name
+
+        # Fetch all remotes with prune and tags (force overwrite local tags from server)
+        git fetch --all --prune --tags --force || echo "some remotes had fetch errors (continuing anyway)"
+        echo "fetched and pruned all remotes"
+
+        # Delete local branches whose remote tracking branch is gone
+        git for-each-ref --format '%(refname:short) %(upstream:track)' refs/heads | while read -r branch status; do
+            if [[ "$status" == "[gone]" ]] && [[ "$branch" != "$CLB" ]]; then
+                echo " deleting local branch $branch (remote was deleted)"
+                git branch -D "$branch"
+            fi
+        done
+
+        # Update all local branches that have upstream tracking
+        git for-each-ref --format='%(refname:short) %(upstream:short)' refs/heads | while read -r LB upstream; do
+            if [[ -n "$upstream" ]]; then
+                echo "checking branch $LB (tracks $upstream)"
                 ALB="refs/heads/$LB"                                       # local branch full path name
-                NBEHIND=$(($(git rev-list --count "$ALB".."$ARB" 2> /dev/null) + 0)) # unpushed local commits
-                NAHEAD=$(($(git rev-list --count "$ARB".."$ALB" 2> /dev/null) + 0))  # unpulled remote commits
+                ARB="refs/remotes/$upstream"                               # remote branch full path name
+                NBEHIND=$(($(git rev-list --count "$ALB".."$ARB" 2> /dev/null) + 0)) # commits behind
+                NAHEAD=$(($(git rev-list --count "$ARB".."$ALB" 2> /dev/null) + 0))  # commits ahead
                 if [ "$NBEHIND" -gt 0 ]; then
                     if [ "$NAHEAD" -gt 0 ]; then
-                        echo " diverged branch $LB is $NBEHIND commit(s) behind and $NAHEAD commit(s) ahead of $REMOTE/$RB. could not be fast-forwarded"
+                        echo " diverged: $LB is $NBEHIND commit(s) behind and $NAHEAD commit(s) ahead of $upstream. could not be fast-forwarded"
                     elif [ "$LB" = "$CLB" ]; then
-                        echo " current branch $LB was $NBEHIND commit(s) behind of $REMOTE/$RB. updating branch with fast-forward merge"
+                        echo " updating current branch $LB ($NBEHIND commit(s) behind $upstream)"
                         git pull --ff-only
                     else
-                        echo " non-current branch $LB was $NBEHIND commit(s) behind of $REMOTE/$RB. updating local branch to remote"
-                        git fetch "$REMOTE" "$ARB":"$ALB" # fetch $ARB then fast-forward $ALB using $ARB
+                        echo " updating branch $LB ($NBEHIND commit(s) behind $upstream)"
+                        git fetch . "$ARB":"$ALB" # fast-forward local branch using remote ref
                     fi
                 fi
-            done
+            fi
         done
     elif [[ -z $1 ]]; then
         # Base Git output
