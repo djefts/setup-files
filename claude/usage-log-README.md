@@ -8,29 +8,38 @@ Cross-session token usage tracking with rolling averages.
 
 Every statusline render appends current session stats to:
 ```
-~/.claude/usage-logs/live/session-{SESSION_ID}.jsonl
+~/.claude/usage-logs/live/session-{SESSION_ID}.dat
 ```
 
-Each entry:
-```json
-{"ts":1780597943,"session":"abc123","input":43022,"output":1025,"cost":0.549940}
+Each entry (space-separated):
+```
+1780597943 abc123-uuid-here 43022 1025 0.549940
 ```
 
-- `ts`: Unix timestamp
-- `session`: Claude session ID
-- `input`: Cumulative input tokens (this session)
-- `output`: Cumulative output tokens (this session)
+Format: `timestamp session_id input_tokens output_tokens cost`
+
+- `timestamp`: Unix timestamp (seconds)
+- `session_id`: Claude session UUID
+- `input_tokens`: Cumulative input tokens (this session)
+- `output_tokens`: Cumulative output tokens (this session)
 - `cost`: Cumulative cost in USD (this session)
 
 ### Daily Consolidation (usage-log-consolidate.sh)
 
-Cron job runs daily at 00:01:
-1. Finds live logs from yesterday (mtime >12h to avoid active sessions)
-2. Extracts yesterday's entries
-3. Consolidates into `~/.claude/usage-logs/archive/{YYYY-MM-DD}.jsonl`
-4. Cleans up:
-   - Live logs >14 days old
+Cron job runs daily at 12:01 PM:
+1. **Consolidates last 5 days** (catches missed weekend runs)
+2. For each day 1-5 days ago:
+   - Skip if archive already exists (idempotent)
+   - Extract that day's entries from all live files
+   - Create `~/.claude/usage-logs/archive/{YYYY-MM-DD}.dat`
+3. Cleans up:
+   - Live logs >7 days old (reduced from 14, since consolidating more aggressively)
    - Archives >90 days old
+
+**Benefits:**
+- Misses Friday → runs Monday, catches Fri/Sat/Sun
+- Idempotent: safe to run multiple times
+- `ls archive/` shows exactly what's consolidated (gaps = missed days)
 
 ### Statusline Display
 
@@ -47,9 +56,9 @@ Calculation:
 
 ## Storage
 
-- **Live logs**: ~100 bytes per render, retained 14 days (~2MB max)
+- **Live logs**: ~100 bytes per render, retained 7 days (~1MB max)
 - **Archives**: ~100KB per day, retained 90 days (~9MB max)
-- **Total**: ~11MB max
+- **Total**: ~10MB max
 
 ## Performance
 
@@ -78,14 +87,16 @@ Not implemented yet - adds complexity, transcripts large.
 
 - `statusline-command.sh`: Appends live logs, calculates averages, displays
 - `usage-log-consolidate.sh`: Daily cron job for archival
-- `~/.claude/usage-logs/live/*.jsonl`: Active session logs
-- `~/.claude/usage-logs/archive/*.jsonl`: Historical daily logs
+- `~/.claude/usage-logs/live/*.dat`: Active session logs (space-separated)
+- `~/.claude/usage-logs/archive/*.dat`: Historical daily logs (space-separated)
 
 ## Cron Setup
 
 Already configured:
 ```cron
-1 0 * * * /home/david.jefts/setup-files/claude/usage-log-consolidate.sh
+1 12 * * * /home/david.jefts/setup-files/claude/usage-log-consolidate.sh
 ```
+
+Runs at 12:01 PM daily (middle of work hours, laptop likely awake).
 
 Verify: `crontab -l`

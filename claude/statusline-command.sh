@@ -476,44 +476,53 @@ TOTAL_TOKENS=$((TOTAL_INPUT_TOKENS + TOTAL_OUTPUT_TOKENS))
 
 #=== USAGE LOG (cross-session tracking) ===#
 USAGE_LOG_DIR="$HOME/.claude/usage-logs"
-SESSION_LOG="$USAGE_LOG_DIR/live/session-${SESSION_ID}.jsonl"
+SESSION_LOG="$USAGE_LOG_DIR/live/session-${SESSION_ID}.dat"
 
-# Append current session stats to live log
+# Append current session stats to live log (space-separated: ts session input output cost)
 if [[ -n "$SESSION_ID" ]] && [[ "$TOTAL_TOKENS" -gt 0 ]]; then
     mkdir -p "$USAGE_LOG_DIR/live" 2>/dev/null
     TIMESTAMP=$(date +%s)
-    echo "{\"ts\":$TIMESTAMP,\"session\":\"$SESSION_ID\",\"input\":$TOTAL_INPUT_TOKENS,\"output\":$TOTAL_OUTPUT_TOKENS,\"cost\":$TOTAL_COST}" >> "$SESSION_LOG"
+    echo "$TIMESTAMP $SESSION_ID $TOTAL_INPUT_TOKENS $TOTAL_OUTPUT_TOKENS $TOTAL_COST" >> "$SESSION_LOG"
 fi
 
-# Calculate rolling averages (24h and 7d)
+# Calculate rolling averages (24h, 7d, all-time)
 DAY_AVG_TOKENS=0
 WEEK_AVG_TOKENS=0
+ALL_AVG_TOKENS=0
 DAY_AVG_COST=0
 WEEK_AVG_COST=0
+ALL_AVG_COST=0
 
 if [[ -d "$USAGE_LOG_DIR/live" ]]; then
     NOW=$(date +%s)
     DAY_AGO=$((NOW - 86400))
     WEEK_AGO=$((NOW - 604800))
 
-    # Read all live logs + recent archive, calculate deltas per session
-    IFS='|' read -r DAY_TOKENS DAY_COST WEEK_TOKENS WEEK_COST < <({
-        cat "$USAGE_LOG_DIR"/live/*.jsonl 2>/dev/null
-        find "$USAGE_LOG_DIR/archive" -name "*.jsonl" -mtime -7 -exec cat {} \; 2>/dev/null
+    # Read all live logs + ALL archives, calculate deltas per session
+    # Format: ts session input output cost (space-separated)
+    IFS='|' read -r DAY_TOKENS DAY_COST WEEK_TOKENS WEEK_COST ALL_TOKENS ALL_COST OLDEST_TS < <({
+        cat "$USAGE_LOG_DIR"/live/session-*.dat 2>/dev/null
+        cat "$USAGE_LOG_DIR"/archive/*.dat 2>/dev/null
     } | awk -v day="$DAY_AGO" -v week="$WEEK_AGO" '
+    BEGIN {
+        oldest = 0
+    }
     {
-        match($0, /"session":"([^"]+)"/, sess_match)
-        match($0, /"ts":([0-9]+)/, ts_match)
-        match($0, /"input":([0-9]+)/, input_match)
-        match($0, /"output":([0-9]+)/, output_match)
-        match($0, /"cost":([0-9.]+)/, cost_match)
+        # Skip empty/invalid lines
+        if (NF < 5 || $1 == "" || $1 == 0) next
 
-        session = sess_match[1]
-        ts = ts_match[1]
-        input = input_match[1]
-        output = output_match[1]
-        cost = cost_match[1]
+        # Space-separated: ts session input output cost
+        ts = $1
+        session = $2
+        input = $3
+        output = $4
+        cost = $5
         tokens = input + output
+
+        # Track globally oldest timestamp (check every line, not just first per session)
+        if (oldest == 0 || ts < oldest) {
+            oldest = ts
+        }
 
         # Track first/last entry per session
         if (!(session in first_ts)) {
@@ -531,28 +540,41 @@ if [[ -d "$USAGE_LOG_DIR/live" ]]; then
             delta_tokens = last_tokens[session] - first_tokens[session]
             delta_cost = last_cost[session] - first_cost[session]
 
-            # Use last_ts for window filtering (session end time)
+            # All-time
+            all_tokens += delta_tokens
+            all_cost += delta_cost
+
+            # 24h window
             if (last_ts[session] >= day) {
                 day_tokens += delta_tokens
                 day_cost += delta_cost
             }
+            # 7d window
             if (last_ts[session] >= week) {
                 week_tokens += delta_tokens
                 week_cost += delta_cost
             }
         }
-        printf "%d|%.6f|%d|%.6f", day_tokens, day_cost, week_tokens, week_cost
+        printf "%d|%.6f|%d|%.6f|%d|%.6f|%d", day_tokens, day_cost, week_tokens, week_cost, all_tokens, all_cost, oldest
     }
     ')
 
     # Calculate per-hour averages
     if [[ "$DAY_TOKENS" -gt 0 ]]; then
         DAY_AVG_TOKENS=$((DAY_TOKENS / 24))
-        DAY_AVG_COST=$(awk "BEGIN {printf \"%.4f\", $DAY_COST / 24}")
+        DAY_AVG_COST=$(awk "BEGIN {printf \"%.2f\", $DAY_COST / 24}")
     fi
     if [[ "$WEEK_TOKENS" -gt 0 ]]; then
         WEEK_AVG_TOKENS=$((WEEK_TOKENS / 168))
-        WEEK_AVG_COST=$(awk "BEGIN {printf \"%.4f\", $WEEK_COST / 168}")
+        WEEK_AVG_COST=$(awk "BEGIN {printf \"%.2f\", $WEEK_COST / 168}")
+    fi
+    if [[ "$ALL_TOKENS" -gt 0 ]] && [[ "$OLDEST_TS" -gt 0 ]]; then
+        # Calculate all-time average based on actual time span
+        TIME_SPAN=$((NOW - OLDEST_TS))
+        HOURS=$((TIME_SPAN / 3600))
+        [[ "$HOURS" -lt 1 ]] && HOURS=1  # Avoid division by zero
+        ALL_AVG_TOKENS=$((ALL_TOKENS / HOURS))
+        ALL_AVG_COST=$(awk "BEGIN {printf \"%.2f\", $ALL_COST / $HOURS}")
     fi
 fi
 
@@ -766,17 +788,22 @@ fi
 # Line 5: Model + Rolling Averages
 LINE5="🤖 ${CYAN}${BOLD}Model:${RESET} ${WHITE}${MODEL_NAME}${RESET} ${GRAY}(CLI v${CC_VERSION})${RESET}"
 
-# Add rolling averages if available
-if [[ "$DAY_AVG_TOKENS" -gt 0 ]] || [[ "$WEEK_AVG_TOKENS" -gt 0 ]]; then
-    LINE5+=" ${BREAK} ${CYAN}${BOLD}Avg:${RESET}"
+# Add rolling averages if available (using symbols: 🌞=24h, 🗓️=7d, ∞=all-time)
+if [[ "$DAY_AVG_TOKENS" -gt 0 ]] || [[ "$WEEK_AVG_TOKENS" -gt 0 ]] || [[ "$ALL_AVG_TOKENS" -gt 0 ]]; then
+    LINE5+=" ${BREAK}"
 
     if [[ "$DAY_AVG_TOKENS" -gt 0 ]]; then
-        LINE5+=" ${GRAY}24h:${RESET} ${WHITE}$(format_number $DAY_AVG_TOKENS)/hr${RESET} ${GRAY}(\$${DAY_AVG_COST})${RESET}"
+        LINE5+=" ${GRAY}🌞${RESET} ${WHITE}$(format_number $DAY_AVG_TOKENS)/hr${RESET} ${GRAY}(\$${DAY_AVG_COST})${RESET}"
     fi
 
     if [[ "$WEEK_AVG_TOKENS" -gt 0 ]]; then
         [[ "$DAY_AVG_TOKENS" -gt 0 ]] && LINE5+=" ${SEPARATOR}"
-        LINE5+=" ${GRAY}7d:${RESET} ${WHITE}$(format_number $WEEK_AVG_TOKENS)/hr${RESET} ${GRAY}(\$${WEEK_AVG_COST})${RESET}"
+        LINE5+=" ${GRAY}🗓️${RESET} ${WHITE}$(format_number $WEEK_AVG_TOKENS)/hr${RESET} ${GRAY}(\$${WEEK_AVG_COST})${RESET}"
+    fi
+
+    if [[ "$ALL_AVG_TOKENS" -gt 0 ]]; then
+        [[ "$DAY_AVG_TOKENS" -gt 0 || "$WEEK_AVG_TOKENS" -gt 0 ]] && LINE5+=" ${SEPARATOR}"
+        LINE5+=" ${GRAY}∞${RESET} ${WHITE}$(format_number $ALL_AVG_TOKENS)/hr${RESET} ${GRAY}(\$${ALL_AVG_COST})${RESET}"
     fi
 fi
 
