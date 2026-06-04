@@ -474,6 +474,88 @@ fi
 
 TOTAL_TOKENS=$((TOTAL_INPUT_TOKENS + TOTAL_OUTPUT_TOKENS))
 
+#=== USAGE LOG (cross-session tracking) ===#
+USAGE_LOG_DIR="$HOME/.claude/usage-logs"
+SESSION_LOG="$USAGE_LOG_DIR/live/session-${SESSION_ID}.jsonl"
+
+# Append current session stats to live log
+if [[ -n "$SESSION_ID" ]] && [[ "$TOTAL_TOKENS" -gt 0 ]]; then
+    mkdir -p "$USAGE_LOG_DIR/live" 2>/dev/null
+    TIMESTAMP=$(date +%s)
+    echo "{\"ts\":$TIMESTAMP,\"session\":\"$SESSION_ID\",\"input\":$TOTAL_INPUT_TOKENS,\"output\":$TOTAL_OUTPUT_TOKENS,\"cost\":$TOTAL_COST}" >> "$SESSION_LOG"
+fi
+
+# Calculate rolling averages (24h and 7d)
+DAY_AVG_TOKENS=0
+WEEK_AVG_TOKENS=0
+DAY_AVG_COST=0
+WEEK_AVG_COST=0
+
+if [[ -d "$USAGE_LOG_DIR/live" ]]; then
+    NOW=$(date +%s)
+    DAY_AGO=$((NOW - 86400))
+    WEEK_AGO=$((NOW - 604800))
+
+    # Read all live logs + recent archive, calculate deltas per session
+    IFS='|' read -r DAY_TOKENS DAY_COST WEEK_TOKENS WEEK_COST < <({
+        cat "$USAGE_LOG_DIR"/live/*.jsonl 2>/dev/null
+        find "$USAGE_LOG_DIR/archive" -name "*.jsonl" -mtime -7 -exec cat {} \; 2>/dev/null
+    } | awk -v day="$DAY_AGO" -v week="$WEEK_AGO" '
+    {
+        match($0, /"session":"([^"]+)"/, sess_match)
+        match($0, /"ts":([0-9]+)/, ts_match)
+        match($0, /"input":([0-9]+)/, input_match)
+        match($0, /"output":([0-9]+)/, output_match)
+        match($0, /"cost":([0-9.]+)/, cost_match)
+
+        session = sess_match[1]
+        ts = ts_match[1]
+        input = input_match[1]
+        output = output_match[1]
+        cost = cost_match[1]
+        tokens = input + output
+
+        # Track first/last entry per session
+        if (!(session in first_ts)) {
+            first_ts[session] = ts
+            first_tokens[session] = tokens
+            first_cost[session] = cost
+        }
+        last_ts[session] = ts
+        last_tokens[session] = tokens
+        last_cost[session] = cost
+    }
+    END {
+        # Calculate deltas per session, filter by time window
+        for (session in first_ts) {
+            delta_tokens = last_tokens[session] - first_tokens[session]
+            delta_cost = last_cost[session] - first_cost[session]
+
+            # Use last_ts for window filtering (session end time)
+            if (last_ts[session] >= day) {
+                day_tokens += delta_tokens
+                day_cost += delta_cost
+            }
+            if (last_ts[session] >= week) {
+                week_tokens += delta_tokens
+                week_cost += delta_cost
+            }
+        }
+        printf "%d|%.6f|%d|%.6f", day_tokens, day_cost, week_tokens, week_cost
+    }
+    ')
+
+    # Calculate per-hour averages
+    if [[ "$DAY_TOKENS" -gt 0 ]]; then
+        DAY_AVG_TOKENS=$((DAY_TOKENS / 24))
+        DAY_AVG_COST=$(awk "BEGIN {printf \"%.4f\", $DAY_COST / 24}")
+    fi
+    if [[ "$WEEK_TOKENS" -gt 0 ]]; then
+        WEEK_AVG_TOKENS=$((WEEK_TOKENS / 168))
+        WEEK_AVG_COST=$(awk "BEGIN {printf \"%.4f\", $WEEK_COST / 168}")
+    fi
+fi
+
 # Git
 IS_GIT_REPO=false
 BRANCH=""
@@ -681,8 +763,22 @@ else
     LINE4+="${RED}N/A${RESET}"
 fi
 
-# Line 5: Model
-LINE5="🤖 ${CYAN}${BOLD}Model:${RESET} ${WHITE}${MODEL_NAME}${RESET} ${GRAY}(${CC_VERSION})${RESET}"
+# Line 5: Model + Rolling Averages
+LINE5="🤖 ${CYAN}${BOLD}Model:${RESET} ${WHITE}${MODEL_NAME}${RESET} ${GRAY}(CLI v${CC_VERSION})${RESET}"
+
+# Add rolling averages if available
+if [[ "$DAY_AVG_TOKENS" -gt 0 ]] || [[ "$WEEK_AVG_TOKENS" -gt 0 ]]; then
+    LINE5+=" ${BREAK} ${CYAN}${BOLD}Avg:${RESET}"
+
+    if [[ "$DAY_AVG_TOKENS" -gt 0 ]]; then
+        LINE5+=" ${GRAY}24h:${RESET} ${WHITE}$(format_number $DAY_AVG_TOKENS)/hr${RESET} ${GRAY}(\$${DAY_AVG_COST})${RESET}"
+    fi
+
+    if [[ "$WEEK_AVG_TOKENS" -gt 0 ]]; then
+        [[ "$DAY_AVG_TOKENS" -gt 0 ]] && LINE5+=" ${SEPARATOR}"
+        LINE5+=" ${GRAY}7d:${RESET} ${WHITE}$(format_number $WEEK_AVG_TOKENS)/hr${RESET} ${GRAY}(\$${WEEK_AVG_COST})${RESET}"
+    fi
+fi
 
 # Line 6: Settings
 if [[ "$THINKING_ENABLED" == "N/A" ]]; then
