@@ -101,9 +101,6 @@ fi
 # ============================================================
 echo "Configuring history and shell options..."
 
-# Make cd resolve symlinks (always use physical path)
-alias cd="cd -P"
-
 # Share Bash history between terminal windows
 # Courtesy of https://unix.stackexchange.com/a/1292
 HISTCONTROL=ignoredups:erasedups
