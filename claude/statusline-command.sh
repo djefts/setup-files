@@ -229,24 +229,32 @@ get_jira_sprint_data() {
         echo "MCP config not found"
         return 1
     fi
-    IFS=$'\t' read -r mcp_url jira_token conf_token < <(jq -r '.mcpServers."river-mcp" | "\(.url)\t\(.headers.JiraToken)\t\(.headers.ConfluenceToken)"' "$mcp_config" 2>/dev/null)
+    IFS=$'\t' read -r mcp_url jira_token conf_token user_email < <(jq -r '.mcpServers."river-mcp" | "\(.url)\t\(.headers.JiraToken)\t\(.headers.ConfluenceToken)\t\(.headers.UserEmail)"' "$mcp_config" 2>/dev/null)
     if [[ -z "$mcp_url" || "$mcp_url" == "null" || -z "$jira_token" || "$jira_token" == "null" || -z "$conf_token" || "$conf_token" == "null" ]]; then
         echo "Jira MCP server not configured"
         return 1
+    fi
+    # UserEmail header optional but recommended
+    if [[ -z "$user_email" || "$user_email" == "null" ]]; then
+        user_email=""
     fi
 
     # Query Jira via MCP
     local jql="assignee = currentUser() AND sprint in openSprints()"
     local fields="status,customfield_10106,customfield_10104,priority,updated"
+    local curl_headers=(-H "Content-Type: application/json" -H "Accept: application/json, text/event-stream" -H "JiraToken: $jira_token" -H "ConfluenceToken: $conf_token")
+    if [[ -n "$user_email" ]]; then
+        curl_headers+=(-H "UserEmail: $user_email")
+    fi
     local response=$(curl -s -X POST "$mcp_url" \
-        -H "Content-Type: application/json" \
-        -H "Accept: application/json, text/event-stream" \
-        -H "JiraToken: $jira_token" \
-        -H "ConfluenceToken: $conf_token" \
+        "${curl_headers[@]}" \
         -d "{\"jsonrpc\":\"2.0\",\"method\":\"tools/call\",\"params\":{\"name\":\"jira_search\",\"arguments\":{\"jql\":\"$jql\",\"fields\":\"$fields\",\"limit\":50}},\"id\":1}" \
         2>/dev/null)
+
+    # Parse response - SSE format with "data:" prefix
     local jira_json=$(grep "^data: " <<< "$response" | sed 's/^data: //' | jq -r '.result.content[0].text' 2>/dev/null)
-    jq '.issues[0]' <<< "$jira_json" > "$CACHE_DIR/first-issue.json"
+
+    jq '.issues[0]' <<< "$jira_json" > "$CACHE_DIR/first-issue.json" 2>/dev/null
     if [[ -z "$jira_json" ]] || [[ "$jira_json" == "null" ]]; then
         echo "Failed to fetch sprint data"
         return 1
