@@ -6,33 +6,36 @@ git() { (
         git branch --show-current
     }
 
-    if [[ $1 = "${commands[0]}" ]]; then
+    # all of these use `command` to prevent accidental recursion since 
+    #   we are overwriting the base `git` command
+    if [[ $1 = "${commands[0]}" ]]; then                                ### INCOMING
         # Show changes from origin to local
-        # use `command` to prevent accidental recursion since we are overwriting the base `docker` command
         command git fetch
         command git log ..origin/"$(branch)"
-    elif [[ $1 = "${commands[1]}" ]]; then
+    elif [[ $1 = "${commands[1]}" ]]; then                              ### OUTGOING
         # Show changes to origin from local
         command git fetch
         command git log origin/"$(branch)"..
-    elif [[ $1 = "${commands[2]}" || "$1" = "${commands[3]}" ]]; then
+    elif [[ $1 = "${commands[2]}" || "$1" = "${commands[3]}" ]]; then   ### MODIFIED or CHANGED
         # Better git diff
         command git diff --name-status "$(branch)"
-    elif [[ $1 = "${commands[4]}" && $2 = "" ]]; then
+    elif [[ $1 = "${commands[4]}" && $2 = "" ]]; then                   ### TAG
         # Git tagging
         echo "Custom git tag command..."
         command git tag -n1
-    elif [[ $1 = "${commands[5]}" ]]; then
+    elif [[ $1 = "${commands[5]}" && $2 = "" ]]; then                   ### GRAPH
         # Fancy Git graph output
-        command git log --graph --abbrev-commit --decorate --format=format:'%C(bold blue)%h%C(reset) - %C(bold cyan)%aD%C(reset) %C(bold green)(%ar)%C(reset)%C(auto)%d%C(reset)%n%C(white)%s%C(reset) %C(dim white)- %an%C(reset)'
-    elif [[ $1 = "${commands[6]}" ]]; then
+        command git log --graph --pretty='%n' --date-order \
+            --abbrev-commit --decorate --color=always \
+            --format=format:'%C(bold blue)%h%C(reset) - %C(bold cyan)%aD%C(reset) %C(bold green)(%ar)%C(reset)%C(auto)%d%C(reset)%n%C(white)%s%C(reset) %C(dim white)- %an%C(reset)'
+    elif [[ $1 = "${commands[6]}" ]]; then                              ### SEARCH
         # Search the repo
         if [[ $2 = "" ]]; then
-            echo "Error- custom search command requires a search term"
+            echo "Error- search command requires a search term"
         else
             command git log -S "$2" --all -p
         fi
-    elif [[ $1 = "${commands[7]}" ]]; then
+    elif [[ $1 = "${commands[7]}" && $2 = "" ]]; then                   ### PULLALL
         # Pull all remote branches from origin that have a local copy
         CLB=$(git rev-parse --abbrev-ref HEAD) # Current Local Branch
 
