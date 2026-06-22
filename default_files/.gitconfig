@@ -1,0 +1,12 @@
+[include]
+    path = ~/setup-files/global.gitconfig
+[user]
+    name = David Jefts
+    email = david.jefts@fireflyspace.com
+[core]
+    hooksPath = .githooks/
+[url "ssh://git@bitbucket.fireflyspace.us"]
+    insteadof = https://bitbucket.fireflyspace.us/scm
+[url "ssh://git@bitbucket.fireflyspace.us/glow/"]
+    insteadOf = https://bitbucket.fireflyspace.us/glow/
+

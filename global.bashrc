@@ -17,7 +17,24 @@ echo "Welcome to your customized Bash profile!"
 # ============================================================
 # Copy pre-built profile files from setup-files to home directory
 echo "Copying default config files..."
-cp -a --remove-destination ~/setup-files/default_files/. -t ~/
+# Create symlinks for config files from default_files to home directory
+for file in ~/setup-files/default_files/.*; do
+    basename_file=$(basename "$file")
+
+    # Skip . and .. directories and README
+    [[ "$basename_file" =~ ^\.\.?$ ]] && continue
+    [[ "$basename_file" == "README.md" ]] && continue
+
+    # Use absolute path for source file
+    source_file=$(readlink -f "$file")
+    target=~/$basename_file
+
+    # Remove existing file/symlink if exists
+    [[ -e "$target" || -L "$target" ]] && rm -f "$target"
+
+    # Create symlink with absolute path
+    ln -s "$source_file" "$target"
+done
 
 # Include global git config without overwriting local settings
 echo "Configuring git..."
