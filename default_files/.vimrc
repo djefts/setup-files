@@ -4,6 +4,26 @@
 " Much of the content of this file was copied/modified from https://github.com/amix/vimrc
 
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+" => Plugins
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+let data_dir = has('nvim') ? stdpath('data') . '/site' : '~/.vim'
+if empty(glob(data_dir . '/autoload/plug.vim'))
+    silent execute '!curl -fLo '.data_dir.'/autoload/plug.vim --create-dirs  https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim'
+    autocmd VimEnter * PlugInstall --sync | source $MYVIMRC
+endif
+" Install vim-plug if not found
+if empty(glob('~/.vim/autoload/plug.vim'))
+    silent !curl -fLo ~/.vim/autoload/plug.vim --create-dirs https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
+endif
+" Run PlugInstall if there are missing plugins
+autocmd VimEnter * if len(filter(values(g:plugs), '!isdirectory(v:val.dir)')) | PlugInstall --sync | source $MYVIMRC | endif
+" vim-plug
+call plug#begin()
+Plug 'tpope/vim-sensible'
+Plug 'aymericbeaumet/vim-symlink'
+call plug#end()
+
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 " => General
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 " Disable compatibility with vi
@@ -16,6 +36,8 @@ command! W execute 'w !sudo tee % > /dev/null' <bar> edit!
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 " => VIM user interface
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+" Mouse scrolling
+set mouse=a
 " Vertical movement with j/k moves 7 lines at a time
 set so=7
 " Display current mode on last line
@@ -27,7 +49,7 @@ filetype plugin indent on
 " Show line numbers
 set number
 " Highlight current row of cursor
-set cursorline
+" set cursorline
 " Highlight current column of cursor
 " set cursorcolumn
 " Enable syntax highlighting
@@ -86,11 +108,11 @@ autocmd BufReadPost * call DetectIndent()
 " => Turn persistent undo on
 "    means that you can undo even when you close a buffer/VIM
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
-" try
-"     set undodir=~/.vim_runtime/temp_dirs/undodir
-"     set undofile
-" catch
-" endtry
+try
+    set undodir=~/.vim_runtime/temp_dirs/undodir
+    set undofile
+catch
+endtry
 
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 " => Helper functions
@@ -171,3 +193,4 @@ function! DetectIndent()
         setlocal shiftwidth=4 softtabstop=4
     endif
 endfunction
+

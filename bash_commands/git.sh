@@ -1,13 +1,13 @@
 # Git shortcuts:
 git() { (
     set -e
-    commands=("incoming" "outgoing" "modified" "changed" "tag" "graph" "search" "pullall")
+    #          0          1          2          3         4     5       6        7         8
+    commands=("incoming" "outgoing" "modified" "changed" "tag" "graph" "search" "pullall" "history")
+    
+    # all of these use `command` to prevent accidental recursion since we are overwriting the base `git` command
     branch() {
-        git branch --show-current
+        command git branch --show-current
     }
-
-    # all of these use `command` to prevent accidental recursion since 
-    #   we are overwriting the base `git` command
     if [[ $1 = "${commands[0]}" ]]; then                                ### INCOMING
         # Show changes from origin to local
         command git fetch
@@ -72,6 +72,9 @@ git() { (
                 fi
             fi
         done
+    elif [[ $1 = "${commands[8]}" ]]; then                              ### HISTORY
+        # Commit subjects as bullets, with the message body nested + indented under each
+        git log --reverse dev..HEAD --pretty=format:"* %s%n%w(0,2,2)%b"
     elif [[ -z $1 ]]; then
         # Base Git output
         command git
