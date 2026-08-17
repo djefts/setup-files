@@ -72,6 +72,8 @@ set guioptions-=r
 set guioptions-=R
 set guioptions-=l
 set guioptions-=L
+" Sync yank with computer clipboard
+set clipboard=unnamedplus
 
 """"""""""""""""""""""""""""""
 " => Status line

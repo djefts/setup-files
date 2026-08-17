@@ -29,8 +29,11 @@ for file in ~/setup-files/default_files/.*; do
     source_file=$(readlink -f "$file")
     target=~/$basename_file
 
-    # Remove existing file/symlink if exists
-    [[ -e "$target" || -L "$target" ]] && rm -f "$target"
+    # Remove existing file/symlink/dir if exists. Use rm -rf so a stale real
+    # directory at the target (e.g. ~/.tmux-powerline) is replaced by the
+    # symlink; plain rm -f can't remove a dir, which made ln -s nest the link
+    # inside it (~/.tmux-powerline/.tmux-powerline) and broke config loading.
+    [[ -e "$target" || -L "$target" ]] && rm -rf "$target"
 
     # Create symlink with absolute path
     ln -s "$source_file" "$target"

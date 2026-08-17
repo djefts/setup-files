@@ -456,7 +456,7 @@
 
 # wan_ip.sh {
 	# Symbol for WAN IP
-	# export TMUX_POWERLINE_SEG_WAN_IP_SYMBOL="ⓦ "
+	export TMUX_POWERLINE_SEG_WAN_IP_SYMBOL="🌐 "
 	# Symbol colour for WAN IP
 	# export TMUX_POWERLINE_SEG_WAN_IP_SYMBOL_COLOUR="255"
 # }
@@ -470,11 +470,13 @@
 	export TMUX_POWERLINE_SEG_WEATHER_UPDATE_PERIOD="600"
 	# How often to update the weather location in seconds (this is only used when latitude and longitude settings are set to "auto")
 	export TMUX_POWERLINE_SEG_WEATHER_LOCATION_UPDATE_PERIOD="86400"
-	# Your location (78613 = Georgetown TX)
 	# Latitude and Longtitude for use with yr.no
 	# Set both to "auto" to detect automatically based on your IP address, or set them manually
-	export TMUX_POWERLINE_SEG_WEATHER_LAT="30.6327"
-	export TMUX_POWERLINE_SEG_WEATHER_LON="-97.6779"
+	export TMUX_POWERLINE_SEG_WEATHER_LAT="auto"
+	export TMUX_POWERLINE_SEG_WEATHER_LON="auto"
+	# Location label next to the temperature (weather_city.sh segment).
+	# "auto" = detect city via GeoIP (tracks auto lat/lon); or set a literal like "Georgetown" / "78613".
+	export TMUX_POWERLINE_SEG_WEATHER_CITY="auto"
 	# Icon style for weather condition symbols:
 	#   "emoji"       - emoji with VS16 variation selector (default, original behaviour)
 	#   "emoji_fixed" - emoji with VS16 stripped; fixes status-bar scrolling/duplication
