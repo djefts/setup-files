@@ -362,8 +362,8 @@
 # tmux_continuum_status.sh {
 	# Path to the tmux-continuum git repo.
 	export TMUX_POWERLINE_SEG_TMUX_CONTINUUM_PATH="/home/david.jefts/.tmux/plugins//tmux-continuum"
-	# Message to perfix the status indication with.
-	export TMUX_POWERLINE_SEG_TMUX_CONTINUUM_PREFIX="Continuum status: "
+	# Message to prefix the "N ago" indication with (overlay segment shows time since last save).
+	export TMUX_POWERLINE_SEG_TMUX_CONTINUUM_PREFIX="saved "
 # }
 
 # tmux_mem_cpu_load.sh {
