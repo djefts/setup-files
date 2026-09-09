@@ -187,10 +187,12 @@ get_visible_length() {
     # Use perl for better Unicode handling with alternation (not character class)
     local wide_count=0
     if [[ "$PERL_AVAILABLE" == "true" ]]; then
-        # Include specific 2-width arrows: ↗️ (U+2197), ↘️ (U+2198) but NOT → (U+2192)
-        wide_count=$(perl -C -ne 'print "$&\n" while /([\x{1F300}-\x{1F9FF}\x{2197}\x{2198}\x{2B00}-\x{2BFF}]\x{FE0F}?)/g' <<< "$stripped" | wc -l)
+        # Only the emoji plane (U+1F300–U+1F9FF) is reliably 2-wide across terminals.
+        # BMP arrows like ↗️ ↘️ ⬇️ (U+2197/2198/2B07) render 1-wide even with VS-16,
+        # so they must NOT be counted here — doing so left their line's border short.
+        wide_count=$(perl -C -ne 'print "$&\n" while /([\x{1F300}-\x{1F9FF}]\x{FE0F}?)/g' <<< "$stripped" | wc -l)
     else
-        wide_count=$(grep -oE '(📁|🌿|🧠|💰|🤖|🧩|🎫|🐳|💻|🖥️|💾|🛑|🚀|📈|📉|⬇️|🐌|🚨|🎯|🔌|🎨|↗️|↘️)' <<< "$stripped" | wc -l)
+        wide_count=$(grep -oE '(📁|🌿|🧠|💰|🤖|🧩|🎫|🐳|💻|🖥️|💾|🛑|🚀|📈|📉|🔻|🐌|🚨|🎯|🔌|🎨)' <<< "$stripped" | wc -l)
     fi
 
     # Debug output if requested
@@ -199,7 +201,7 @@ get_visible_length() {
         echo "DEBUG: char_count=$char_count wide_count=$wide_count total=$((char_count + wide_count))" >> "$CACHE_DIR/width-debug.log"
         # Show which emojis were found
         if [[ "$PERL_AVAILABLE" == "true" ]]; then
-            local found_emojis=$(perl -C -ne 'print "$&\n" while /([\x{1F300}-\x{1F9FF}\x{2197}\x{2198}\x{2B00}-\x{2BFF}]\x{FE0F}?)/g' <<< "$stripped" | tr '\n' ' ')
+            local found_emojis=$(perl -C -ne 'print "$&\n" while /([\x{1F300}-\x{1F9FF}]\x{FE0F}?)/g' <<< "$stripped" | tr '\n' ' ')
             echo "DEBUG: found_emojis='$found_emojis'" >> "$CACHE_DIR/width-debug.log"
         fi
     fi
@@ -734,11 +736,11 @@ if [[ "$IS_GIT_REPO" == "true" ]]; then
 
     # Dev divergence display
     if (( AHEAD > 0 && BEHIND > 0 )); then
-        GIT_INFO+="${BREAK}${CYAN}origin/dev ↗️${AHEAD} ↘️${BEHIND}${RESET}"
+        GIT_INFO+="${BREAK}${CYAN}origin/dev ↑${AHEAD} ↓${BEHIND}${RESET}"
     elif (( AHEAD > 0 )); then
-        GIT_INFO+="${BREAK}${CYAN}origin/dev ↗️${AHEAD}${RESET}"
+        GIT_INFO+="${BREAK}${CYAN}origin/dev ↑${AHEAD}${RESET}"
     elif (( BEHIND > 0 )); then
-        GIT_INFO+="${BREAK}${CYAN}origin/dev ↘️${BEHIND}${RESET}"
+        GIT_INFO+="${BREAK}${CYAN}origin/dev ↓${BEHIND}${RESET}"
     fi
 
     LINE2="🌿 ${GIT_INFO}"
@@ -798,7 +800,7 @@ if [[ "$DAY_AVG_TOKENS" -gt 0 ]] || [[ "$WEEK_AVG_TOKENS" -gt 0 ]] || [[ "$ALL_A
 
     if [[ "$WEEK_AVG_TOKENS" -gt 0 ]]; then
         [[ "$DAY_AVG_TOKENS" -gt 0 ]] && LINE5+=" ${SEPARATOR}"
-        LINE5+=" ${GRAY}🗓️${RESET} ${WHITE}$(format_number $WEEK_AVG_TOKENS)/hr${RESET} ${GRAY}(\$${WEEK_AVG_COST})${RESET}"
+        LINE5+=" ${GRAY}📅${RESET} ${WHITE}$(format_number $WEEK_AVG_TOKENS)/hr${RESET} ${GRAY}(\$${WEEK_AVG_COST})${RESET}"
     fi
 
     if [[ "$ALL_AVG_TOKENS" -gt 0 ]]; then
@@ -821,7 +823,7 @@ LINE6="🧩 ${CYAN}${BOLD}Thinking:${RESET} ${THINKING_STATUS} ${BREAK} ${CYAN}$
 # Determine status
 if [[ -n "${DAYS_OFF}" ]]; then
     # Format days_off value (get absolute value for display)
-    local days_display
+    days_display=""
     if (( $(bc -l <<< "${DAYS_OFF} < 0") )); then
         days_display=$(bc -l <<< "scale=1; ${DAYS_OFF} * -1")
     else
@@ -845,7 +847,7 @@ if [[ -n "${DAYS_OFF}" ]]; then
         burndown_msg="Get faster"
         burndown_days="~${days_display}d behind"
     elif (( $(bc -l <<< "${DAYS_OFF} > -(${SPRINT_TICKET_AVG} * 2)") )); then
-        burndown_emoji="⬇️"
+        burndown_emoji="🔻"
         burndown_msg="You're behind!"
         burndown_days="~${days_display}d behind"
     elif (( $(bc -l <<< "${DAYS_OFF} > -(${SPRINT_TICKET_AVG} * 3)") )); then
