@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# git tags — list tags, each with its first annotation line (extra args pass through,
+# e.g. `git tags 'v1.*'` to filter)
+git tag -n1 "$@"

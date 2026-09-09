@@ -1,0 +1,88 @@
+#!/usr/bin/env bash
+# git branches — clean list of active + relevant branches:
+#   - committed within the last 90 days
+#   - NOT merged into the base branch
+# Locals listed first (like `git branch`), then remotes; each sorted A-Z.
+set -e
+
+cutoff=$(( $(date +%s) - 90 * 86400 ))
+tab=$'\t'
+width=$(tput cols 2> /dev/null); [[ -n "$width" ]] || width=120
+
+# Base branch to measure divergence / "merged" against (prefer dev, then main, then master)
+base=""
+for b in dev main master; do
+    if git show-ref --verify --quiet "refs/heads/$b"; then base="$b"; break; fi
+done
+# Ahead/behind is measured vs the base branch (works for local + remote refs alike)
+if [[ -n "$base" ]]; then ab_fmt="%(ahead-behind:$base)"; else ab_fmt="-"; fi
+
+# Emit rows for a ref set: $1 = ref pattern (refs/heads or refs/remotes)
+branch_rows() {
+    git for-each-ref \
+        ${base:+--no-merged="$base"} \
+        --sort=refname \
+        --format="%(committerdate:unix)${tab}%(HEAD)%(refname:lstrip=2)${tab}%(committerdate:relative)${tab}${ab_fmt}${tab}%(authorname)${tab}%(subject)${tab}%(upstream)${tab}%(upstream:track)" \
+        "$1" |
+        awk -F"$tab" -v cutoff="$cutoff" 'BEGIN{
+                OFS = FS
+                # Conventional-commit type -> compact icon (saves horizontal space)
+                ct["feat"]="✨"; ct["fix"]="🐛"; ct["docs"]="📝"; ct["style"]="🎨"
+                ct["refactor"]="♻"; ct["perf"]="⚡"; ct["test"]="✅"; ct["build"]="📦"
+                ct["ci"]="🔁"; ct["chore"]="🔧"; ct["revert"]="⏪"; ct["wip"]="🚧"
+            }
+            $2 ~ /HEAD$/ { next }                    # skip origin/HEAD symbolic ref
+            { sub(/^ origin\//, " ", $2) }           # drop the default remote name, keep others
+            $1 >= cutoff {
+                split($4, x, " "); ab = ""
+                if (x[1] > 0) ab = ab "↑" x[1]
+                if (x[2] > 0) ab = ab "↓" x[2]
+                if (ab == "") ab = "="            # in sync with base
+                # Truncate over-long names (… marks a cut); keep the leading marker
+                name = substr($2, 2)
+                if (length(name) > 30) $2 = substr($2, 1, 1) substr(name, 1, 29) "…"
+                # $7 = upstream ref, $8 = upstream track ([ahead/behind]/[gone]/empty).
+                # A configured upstream with a non-empty track means the branch has
+                # drifted from its remote (unpushed, behind, diverged, or gone).
+                if ($7 != "" && $8 != "") $2 = $2 " ⚠"
+                # Swap a conventional-commit prefix for its icon
+                s = $6
+                if (s ~ /^[a-z]+(\([^)]*\))?!?: /) {
+                    type = s; sub(/[(!:].*/, "", type)
+                    if (type in ct) { sub(/^[a-z]+(\([^)]*\))?!?: /, "", s); s = ct[type] " " s }
+                }
+                print $2, $3, ab, $5, s
+            }'
+}
+
+# Clip each row to the terminal width (… marks a cut) so long subjects, which
+# sit in the last column, never wrap under the branch names. Runs after column
+# (needs aligned widths) but before color (must count only visible characters).
+truncate() { awk -v w="$width" '{ if (length > w) $0 = substr($0, 1, w - 1) "…"; print }'; }
+
+# Color pass — added after truncation so ANSI escapes never skew column widths.
+colorize() {
+    sed -E \
+        -e '1 s/.*/\x1b[1m&\x1b[0m/' \
+        -e '/^──/ s/.*/\x1b[2m&\x1b[0m/' \
+        -e 's/^\*([^ ]+)/*\x1b[1;32m\1\x1b[0m/' \
+        -e '/⚠/ s/^ ([^ ]+)/ \x1b[38;5;208m\1\x1b[0m/' \
+        -e '/⚠/! s/^ ([^ ]+)/ \x1b[36m\1\x1b[0m/' \
+        -e 's/⚠/\x1b[1;38;5;208m⚠\x1b[0m/' \
+        -e 's/↑[0-9]+/\x1b[32m&\x1b[0m/g' \
+        -e 's/↓[0-9]+/\x1b[31m&\x1b[0m/g' \
+        -e 's/[0-9]+ (second|minute|hour|day)s? ago/\x1b[32m&\x1b[0m/' \
+        -e 's/[0-9]+ weeks? ago/\x1b[33m&\x1b[0m/' \
+        -e 's/[0-9]+ (month|year)s? ago/\x1b[31m&\x1b[0m/'
+}
+
+header="BRANCH${tab}AGE${tab}±${base:-trunk}${tab}AUTHOR${tab}SUBJECT"
+
+# Single column pass over both groups so widths line up under one header.
+# The "── REMOTE ──" divider carries no tab, so column leaves it untouched.
+{
+    printf '%s\n' "$header"
+    branch_rows 'refs/heads'
+    printf '── REMOTE ──\n'
+    branch_rows 'refs/remotes'
+} | column -t -s"$tab" | truncate | colorize

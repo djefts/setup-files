@@ -49,6 +49,9 @@ command git config --global include.path "~/setup-files/global.gitconfig"
 # ============================================================
 # Load custom aliases and bash functions early so they're available everywhere
 echo "Loading custom aliases and commands..."
+# Put repo executables (custom git-* subcommands, etc.) on PATH so git and the
+# shell find them. Run straight from the checkout — no copy/symlink into ~.
+[[ ":$PATH:" != *":$HOME/setup-files/bin:"* ]] && export PATH="$HOME/setup-files/bin:$PATH"
 source ~/setup-files/.bash_aliases
 for f in ~/setup-files/bash_commands/*; do
   [[ "$(basename "$f")" == README* ]] && continue

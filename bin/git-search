@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# git search <term> — pickaxe search across all history for added/removed <term>
+set -e
+if [[ -z "$1" ]]; then
+    echo "Error- search command requires a search term" >&2
+    exit 1
+fi
+git log -S "$1" --all -p

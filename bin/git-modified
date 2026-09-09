@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# git modified (alias: git changed) — name-status diff against the current branch
+set -e
+git diff --name-status "$(git branch --show-current)"

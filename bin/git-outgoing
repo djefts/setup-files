@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# git outgoing — show local changes not yet pushed to origin
+set -e
+branch=$(git branch --show-current)
+git fetch
+git log origin/"$branch"..

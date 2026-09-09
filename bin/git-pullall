@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+# git pullall — fetch/prune all remotes, drop local branches whose remote is gone,
+# and fast-forward every local branch that tracks an upstream.
+set -e
+
+CLB=$(git rev-parse --abbrev-ref HEAD) # Current Local Branch
+
+# Fetch all remotes with prune and tags (force overwrite local tags from server)
+git fetch --all --prune --tags --force || echo "some remotes had fetch errors (continuing anyway)"
+echo "fetched and pruned all remotes"
+
+# Delete local branches whose remote tracking branch is gone
+git for-each-ref --format '%(refname:short) %(upstream:track)' refs/heads | while read -r branch status; do
+    if [[ "$status" == "[gone]" ]] && [[ "$branch" != "$CLB" ]]; then
+        echo " deleting local branch $branch (remote was deleted)"
+        git branch -D "$branch"
+    fi
+done
+
+# Update all local branches that have upstream tracking
+git for-each-ref --format='%(refname:short) %(upstream:short)' refs/heads | while read -r LB upstream; do
+    if [[ -n "$upstream" ]]; then
+        echo "checking branch $LB (tracks $upstream)"
+        ALB="refs/heads/$LB"                                       # local branch full path name
+        ARB="refs/remotes/$upstream"                               # remote branch full path name
+        NBEHIND=$(($(git rev-list --count "$ALB".."$ARB" 2> /dev/null) + 0)) # commits behind
+        NAHEAD=$(($(git rev-list --count "$ARB".."$ALB" 2> /dev/null) + 0))  # commits ahead
+        if [ "$NBEHIND" -gt 0 ]; then
+            if [ "$NAHEAD" -gt 0 ]; then
+                echo " diverged: $LB is $NBEHIND commit(s) behind and $NAHEAD commit(s) ahead of $upstream. could not be fast-forwarded"
+            elif [ "$LB" = "$CLB" ]; then
+                echo " updating current branch $LB ($NBEHIND commit(s) behind $upstream)"
+                git pull --ff-only
+            else
+                echo " updating branch $LB ($NBEHIND commit(s) behind $upstream)"
+                git fetch . "$ARB":"$ALB" # fast-forward local branch using remote ref
+            fi
+        fi
+    fi
+done

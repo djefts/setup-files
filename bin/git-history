@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# git history — commit subjects as bullets, message bodies nested + indented under each
+git log --reverse dev..HEAD --pretty=format:"* %s%w(0,2,2)%+b"
