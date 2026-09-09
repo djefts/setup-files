@@ -74,7 +74,7 @@ git() { (
         done
     elif [[ $1 = "${commands[8]}" ]]; then                              ### HISTORY
         # Commit subjects as bullets, with the message body nested + indented under each
-        git log --reverse dev..HEAD --pretty=format:"* %s%n%w(0,2,2)%b"
+        git log --reverse dev..HEAD --pretty=format:"* %s%w(0,2,2)%+b"
     elif [[ -z $1 ]]; then
         # Base Git output
         command git
