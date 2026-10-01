@@ -6,7 +6,8 @@
 [core]
     hooksPath = .githooks/
 [url "ssh://git@bitbucket.fireflyspace.us"]
-	insteadof = https://bitbucket.fireflyspace.us/scm
+    insteadof = https://bitbucket.fireflyspace.us/scm
 [url "ssh://git@bitbucket.fireflyspace.us/glow/"]
     insteadOf = https://bitbucket.fireflyspace.us/glow/
-
+[url "git@github.com:"]
+    insteadOf = https://github.com/

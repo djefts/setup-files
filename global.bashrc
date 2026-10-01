@@ -208,6 +208,11 @@ fi
 # ============================================================
 # Disable Claude Code attribution header
 export CLAUDE_CODE_ATTRIBUTION_HEADER=0
+# Add go modules to PATH
+if [ -d '~/go/bin/' ]; then
+    export PATH=$PATH:~/go/bin
+fi
+
 
 printf "\nwelcome david\n"
 
